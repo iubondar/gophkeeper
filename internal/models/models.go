@@ -5,3 +5,8 @@ type RegisterIn struct {
 	PasswordHash string `json:"password_hash"`
 	Salt         string `json:"salt"`
 }
+
+type UserCredentials struct {
+	Login    string
+	Password string
+}

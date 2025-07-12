@@ -2,8 +2,11 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
+	"gophkeeper/internal/client/api"
+	"gophkeeper/internal/client/cmd"
 	"gophkeeper/internal/config"
 	"io"
 	"log"
@@ -14,6 +17,7 @@ import (
 )
 
 var serverURL string
+var registerHandler *cmd.RegisterHandler
 
 type AuthResponse struct {
 	AccessToken  string `json:"access_token"`
@@ -32,9 +36,8 @@ func main() {
 	}
 
 	serverURL = config.RunAddress
-	if !strings.HasPrefix(serverURL, "http") {
-		serverURL = "http://" + serverURL
-	}
+	apiClient := api.NewAPIClient(serverURL)
+	registerHandler = cmd.NewRegisterHandler(apiClient)
 
 	fmt.Println("=== GophKeeper CLI ===")
 	fmt.Println("Подключение к серверу...")
@@ -42,7 +45,6 @@ func main() {
 	// Проверяем доступность сервера
 	if err := checkServerHealth(); err != nil {
 		fmt.Printf("Ошибка подключения к серверу: %v\n", err)
-		fmt.Println("Убедитесь, что сервер запущен на порту 8080")
 		return
 	}
 
@@ -56,7 +58,11 @@ func main() {
 
 		switch choice {
 		case "1":
-			handleRegistration()
+			cmd := cmd.NewRegisterHandler(apiClient)
+			err := cmd.Run(context.Background())
+			if err != nil {
+				fmt.Printf("Ошибка: %v\n", err)
+			}
 		case "2":
 			handleLogin()
 		case "3":
@@ -101,39 +107,6 @@ func getUserChoice() string {
 	choice = strings.TrimSpace(choice)
 	choice = strings.TrimSuffix(choice, "\r") // Убираем carriage return для Windows
 	return choice
-}
-
-func handleRegistration() {
-	fmt.Println("\n=== Регистрация ===")
-
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Print("Введите логин: ")
-	login, _ := reader.ReadString('\n')
-	login = strings.TrimSpace(login)
-
-	fmt.Print("Введите пароль: ")
-	password, _ := reader.ReadString('\n')
-	password = strings.TrimSpace(password)
-
-	// Создаем запрос для регистрации
-	requestBody := map[string]string{
-		"login":         login,
-		"password_hash": "test-hash", // В реальной реализации здесь будет хэш
-		"salt":          "test-salt", // В реальной реализации здесь будет соль
-	}
-
-	jsonData, _ := json.Marshal(requestBody)
-
-	resp, err := http.Post(serverURL+"/api/register", "application/json", strings.NewReader(string(jsonData)))
-	if err != nil {
-		fmt.Printf("Ошибка при регистрации: %v\n", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	fmt.Printf("Ответ сервера: %s\n", string(body))
 }
 
 func handleLogin() {
