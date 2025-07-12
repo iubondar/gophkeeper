@@ -10,33 +10,48 @@ type RegisterAPIClient interface {
 	Register(ctx context.Context, in models.RegisterIn) error
 }
 
-// RegisterHandler обрабатывает команду регистрации
-type RegisterHandler struct {
+// RegisterCommand обрабатывает команду регистрации
+type RegisterCommand struct {
 	apiClient RegisterAPIClient
 }
 
-// NewRegisterHandler создает новый обработчик регистрации
-func NewRegisterHandler(apiClient RegisterAPIClient) RegisterHandler {
-	return RegisterHandler{
+// NewRegisterCommand создает новую команду регистрации
+func NewRegisterCommand(apiClient RegisterAPIClient) *RegisterCommand {
+	return &RegisterCommand{
 		apiClient: apiClient,
 	}
 }
 
-// Handle выполняет процесс регистрации пользователя
-func (h *RegisterHandler) Run(ctx context.Context, in models.UserCredentials) error {
+// Execute выполняет процесс регистрации пользователя
+func (c *RegisterCommand) Execute(ctx context.Context, args any) error {
+	credentials, ok := args.(models.UserCredentials)
+	if !ok {
+		return fmt.Errorf("неверный тип аргументов для команды регистрации")
+	}
+
 	// Создаем запрос для регистрации
 	requestBody := models.RegisterIn{
-		Login:        in.Login,
-		PasswordHash: in.Password,
+		Login:        credentials.Login,
+		PasswordHash: credentials.Password,
 		Salt:         "test-salt", // TODO: реализовать генерацию соли
 	}
 
 	// Выполняем регистрацию через API клиент
-	err := h.apiClient.Register(ctx, requestBody)
+	err := c.apiClient.Register(ctx, requestBody)
 	if err != nil {
 		return fmt.Errorf("ошибка при регистрации: %w", err)
 	}
 
 	fmt.Println("✅ Регистрация успешна!")
 	return nil
+}
+
+// GetName возвращает имя команды
+func (c *RegisterCommand) GetName() string {
+	return "register"
+}
+
+// GetDescription возвращает описание команды
+func (c *RegisterCommand) GetDescription() string {
+	return "Регистрация нового пользователя"
 }

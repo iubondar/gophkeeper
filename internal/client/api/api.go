@@ -33,3 +33,20 @@ func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
 
 	return nil
 }
+
+func (c *APIClient) Login(ctx context.Context, in models.LoginIn) error {
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		SetBody(in).
+		Post("/api/login")
+
+	if err != nil {
+		return err
+	}
+
+	if response.IsError() {
+		return fmt.Errorf("failed to login: %s", response.String())
+	}
+
+	return nil
+}
