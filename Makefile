@@ -2,11 +2,11 @@
 
 # Сборка сервера
 build-server:
-	go build -o bin/gophkeeper ./cmd/gophkeeper
+	go build -o bin/gophkeeper-server ./cmd/gophkeeper-server
 
 # Сборка CLI клиента
-build-cli:
-	go build -o bin/cli ./cmd/cli
+build-client:
+	go build -o bin/gophkeeper-client ./cmd/gophkeeper-client
 
 # Сборка всех компонентов
 build: build-server build-cli
@@ -17,11 +17,11 @@ test:
 
 # Запуск сервера
 run-server: build-server
-	./bin/gophkeeper
+	./bin/gophkeeper-server
 
 # Запуск CLI клиента
 run-cli: build-cli
-	./bin/cli
+	./bin/gophkeeper-client
 
 # Очистка
 clean:
