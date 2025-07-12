@@ -5,7 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/google/uuid"
-	// _ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type Storage struct {
@@ -21,6 +21,12 @@ func NewStorage(dsn string) (storage *Storage, err error) {
 	return &Storage{
 		db: db,
 	}, nil
+}
+
+// CheckStatus проверяет состояние хранилища.
+// Возвращает ошибку, если база данных недоступна.
+func (s *Storage) CheckStatus(ctx context.Context) error {
+	return s.db.PingContext(ctx)
 }
 
 func (s *Storage) Register(ctx context.Context, userID uuid.UUID, login string, passwordHash string) (ok bool, err error) {

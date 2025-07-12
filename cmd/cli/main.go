@@ -4,14 +4,16 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"gophkeeper/internal/config"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 )
 
-const serverURL = "http://localhost:8080"
+var serverURL string
 
 type AuthResponse struct {
 	AccessToken  string `json:"access_token"`
@@ -24,6 +26,16 @@ type SaltResponse struct {
 }
 
 func main() {
+	config, err := config.NewConfig(os.Args[0], os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	serverURL = config.RunAddress
+	if !strings.HasPrefix(serverURL, "http") {
+		serverURL = "http://" + serverURL
+	}
+
 	fmt.Println("=== GophKeeper CLI ===")
 	fmt.Println("Подключение к серверу...")
 

@@ -14,8 +14,8 @@ type Config struct {
 
 // для локальной разработки
 const (
-	defaultRunAddress  = "localhost:8000"
-	defaultDatabaseURI = "host=localhost user=newuser password=password dbname=gophermart sslmode=disable"
+	defaultRunAddress  = "localhost:8080"
+	defaultDatabaseURI = "host=localhost user=newuser password=password dbname=gophkeeper sslmode=disable"
 )
 
 func NewConfig(progname string, args []string) (*Config, error) {

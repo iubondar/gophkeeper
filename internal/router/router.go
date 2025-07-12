@@ -4,15 +4,20 @@ package router
 
 import (
 	"gophkeeper/internal/compress"
+	"gophkeeper/internal/handlers"
+	"gophkeeper/internal/storage"
 	"net/http"
 
 	"github.com/go-chi/chi"
 )
 
 // Возвращает настроенный маршрутизатор и ошибку, если она возникла.
-func NewRouter() (chi.Router, error) {
+func NewRouter(storage *storage.Storage) (chi.Router, error) {
 	router := chi.NewRouter()
 	router.Use(compress.WithGzipCompression)
+
+	healthHandler := handlers.NewHealthHandler(storage)
+	router.Get("/health", healthHandler.Health)
 
 	// API маршруты
 	router.Route("/api", func(r chi.Router) {
@@ -28,8 +33,6 @@ func NewRouter() (chi.Router, error) {
 		r.Get("/records/{label}", handleGetRecord)
 		r.Put("/records/{label}", handleUpdateRecord)
 		r.Get("/files/{label}/download", handleDownloadFile)
-
-		r.Get("/health", handleHealth)
 	})
 
 	return router, nil
@@ -89,9 +92,4 @@ func handleUpdateRecord(w http.ResponseWriter, r *http.Request) {
 func handleDownloadFile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("test file content"))
-}
-
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
 }
