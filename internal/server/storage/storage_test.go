@@ -3,10 +3,9 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"gophkeeper/internal/server/storage/testhelpers"
 	"log"
 	"testing"
-
-	"gophkeeper/internal/storage/testhelpers"
 
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"

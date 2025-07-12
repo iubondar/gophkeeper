@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"gophkeeper/internal/config"
-	"gophkeeper/internal/router"
 	"gophkeeper/internal/server"
-	"gophkeeper/internal/storage"
+	"gophkeeper/internal/server/router"
+	"gophkeeper/internal/server/storage"
 
 	"go.uber.org/zap"
 )

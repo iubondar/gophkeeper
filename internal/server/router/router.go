@@ -3,9 +3,9 @@
 package router
 
 import (
-	"gophkeeper/internal/compress"
-	"gophkeeper/internal/handlers"
-	"gophkeeper/internal/storage"
+	handlers "gophkeeper/internal/server/api"
+	"gophkeeper/internal/server/compress"
+	"gophkeeper/internal/server/storage"
 	"net/http"
 
 	"github.com/go-chi/chi"
