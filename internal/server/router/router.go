@@ -6,6 +6,7 @@ import (
 	handlers "gophkeeper/internal/server/api"
 	"gophkeeper/internal/server/compress"
 	"gophkeeper/internal/server/storage"
+	"gophkeeper/internal/server/usecase"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -19,9 +20,11 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 	healthHandler := handlers.NewHealthHandler(storage)
 	router.Get("/health", healthHandler.Health)
 
+	registerHandler := handlers.NewRegisterHandler(usecase.NewRegisterUsecase(storage))
+
 	// API маршруты
 	router.Route("/api", func(r chi.Router) {
-		r.Post("/register", handleRegister)
+		r.Post("/register", registerHandler.Register)
 		r.Post("/login", handleLogin)
 		r.Post("/authenticate", handleAuthenticate)
 		r.Post("/refresh", handleRefresh)
@@ -39,11 +42,6 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 }
 
 // Заглушки для обработчиков
-func handleRegister(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"message": "Регистрация пока не реализована"}`))
-}
-
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"salt": "dGVzdC1zYWx0"}`))

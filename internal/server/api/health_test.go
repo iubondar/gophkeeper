@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gophkeeper/internal/storage/mocks"
+	"gophkeeper/internal/server/storage/mocks"
 
 	"github.com/stretchr/testify/assert"
 	gomock "go.uber.org/mock/gomock"
