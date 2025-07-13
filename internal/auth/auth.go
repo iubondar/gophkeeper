@@ -37,7 +37,7 @@ func generateToken(userID string, duration time.Duration) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(secretKey)
+	return token.SignedString([]byte(secretKey))
 }
 
 func GetUserIDFromReq(req *http.Request) (userID uuid.UUID, err error) {

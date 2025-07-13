@@ -42,7 +42,7 @@ func TestRegisterUsecase_Register(t *testing.T) {
 				PasswordHash: "testpass",
 				Salt:         "testsalt",
 			},
-			expectedError: usecase.ErrLoginOrPasswordEmpty,
+			expectedError: models.ErrLoginOrPasswordEmpty,
 		},
 		{
 			name: "Empty password",
@@ -51,7 +51,7 @@ func TestRegisterUsecase_Register(t *testing.T) {
 				PasswordHash: "",
 				Salt:         "testsalt",
 			},
-			expectedError: usecase.ErrLoginOrPasswordEmpty,
+			expectedError: models.ErrLoginOrPasswordEmpty,
 		},
 		{
 			name: "User already exists",
@@ -61,7 +61,7 @@ func TestRegisterUsecase_Register(t *testing.T) {
 				Salt:         "testsalt",
 			},
 			repoOk:        false,
-			expectedError: usecase.ErrUserAlreadyExists,
+			expectedError: models.ErrUserAlreadyExists,
 		},
 		{
 			name: "Repository error",

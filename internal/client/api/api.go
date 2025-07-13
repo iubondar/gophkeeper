@@ -3,8 +3,10 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gophkeeper/internal/models"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -16,6 +18,9 @@ type APIClient struct {
 }
 
 func NewAPIClient(serverURL string) *APIClient {
+	if !strings.HasPrefix(serverURL, "http") {
+		serverURL = "http://" + serverURL
+	}
 	client := resty.New().SetBaseURL(serverURL)
 	return &APIClient{httpc: client}
 }
@@ -45,7 +50,7 @@ func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
 	}
 
 	if response.IsError() {
-		return fmt.Errorf("failed to register: %s", response.String())
+		return errors.New(response.String())
 	}
 
 	return c.handleAuthenticateResponse(response.Body())
@@ -63,7 +68,7 @@ func (c *APIClient) Login(ctx context.Context, in models.LoginIn) (salt string, 
 	}
 
 	if response.IsError() {
-		return "", fmt.Errorf("failed to login: %s", response.String())
+		return "", errors.New(response.String())
 	}
 
 	var out models.LoginOut
@@ -86,7 +91,7 @@ func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) 
 	}
 
 	if response.IsError() {
-		return fmt.Errorf("failed to authenticate: %s", response.String())
+		return errors.New(response.String())
 	}
 
 	return c.handleAuthenticateResponse(response.Body())

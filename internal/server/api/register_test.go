@@ -9,7 +9,6 @@ import (
 
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
-	"gophkeeper/internal/server/usecase"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -43,14 +42,14 @@ func TestRegisterHandler_Register(t *testing.T) {
 			name:           "User already exists",
 			method:         http.MethodPost,
 			body:           mustMarshal(t, models.RegisterIn{Login: "testuser", PasswordHash: "testpass", Salt: "testsalt"}),
-			ucError:        usecase.ErrUserAlreadyExists,
+			ucError:        models.ErrUserAlreadyExists,
 			expectedStatus: http.StatusConflict,
 		},
 		{
 			name:           "Login or password empty",
 			method:         http.MethodPost,
 			body:           mustMarshal(t, models.RegisterIn{Login: "testuser", PasswordHash: "testpass", Salt: "testsalt"}),
-			ucError:        usecase.ErrLoginOrPasswordEmpty,
+			ucError:        models.ErrLoginOrPasswordEmpty,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{

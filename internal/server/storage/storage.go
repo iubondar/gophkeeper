@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/queries"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
@@ -35,12 +36,14 @@ func (s *Storage) CheckStatus(ctx context.Context) error {
 }
 
 func (s *Storage) Register(ctx context.Context, userID uuid.UUID, login string, passwordHash string, salt string) (ok bool, err error) {
-	_, err = s.db.ExecContext(ctx, queries.InsertUser, userID, login, passwordHash)
+	_, err = s.db.ExecContext(ctx, queries.InsertUser, userID, login, passwordHash, salt)
 	if err != nil {
 		// Если пользователь с логином уже существует - возвращаем не ок
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			return false, nil
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				return false, models.ErrUserAlreadyExists
+			}
 		}
 
 		// Другая ошибка

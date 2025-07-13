@@ -41,7 +41,7 @@ func TestAuthenticateUsecase_Authenticate(t *testing.T) {
 			login:         "nouser",
 			passwordHash:  "invalidhash",
 			repoUserID:    uuid.Nil,
-			expectedError: usecase.ErrUserNotFound,
+			expectedError: models.ErrUserNotFound,
 		},
 		{
 			name:          "Repository error",
@@ -54,13 +54,13 @@ func TestAuthenticateUsecase_Authenticate(t *testing.T) {
 			name:          "Empty login",
 			login:         "",
 			passwordHash:  "validhash",
-			expectedError: usecase.ErrLoginOrPasswordEmpty,
+			expectedError: models.ErrLoginOrPasswordEmpty,
 		},
 		{
 			name:          "Empty password hash",
 			login:         "testuser",
 			passwordHash:  "",
-			expectedError: usecase.ErrLoginOrPasswordEmpty,
+			expectedError: models.ErrLoginOrPasswordEmpty,
 		},
 	}
 

@@ -29,7 +29,7 @@ func NewAuthenticateUsecase(repo AuthenticateUserRepository) AuthenticateUsecase
 
 func (uc *authenticateUsecase) Authenticate(ctx context.Context, login string, passwordHash string) (result models.AuthenticateOut, err error) {
 	if len(login) < 1 || len(passwordHash) < 1 {
-		return models.AuthenticateOut{}, ErrLoginOrPasswordEmpty
+		return models.AuthenticateOut{}, models.ErrLoginOrPasswordEmpty
 	}
 
 	userID, err := uc.repo.GetUserByLoginAndPassword(ctx, login, passwordHash)
@@ -39,7 +39,7 @@ func (uc *authenticateUsecase) Authenticate(ctx context.Context, login string, p
 
 	// Если пользователь не найден
 	if userID == uuid.Nil {
-		return models.AuthenticateOut{}, ErrUserNotFound
+		return models.AuthenticateOut{}, models.ErrUserNotFound
 	}
 
 	return MakeAuthenticateOut(userID)

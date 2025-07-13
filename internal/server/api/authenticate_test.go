@@ -8,7 +8,6 @@ import (
 
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
-	"gophkeeper/internal/server/usecase"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -43,14 +42,14 @@ func TestAuthenticateHandler_Authenticate(t *testing.T) {
 			name:           "Invalid credentials",
 			method:         http.MethodPost,
 			body:           mustMarshal(t, models.AuthenticateIn{Login: "testuser", PasswordHash: "invalidhash"}),
-			ucError:        usecase.ErrUserNotFound,
+			ucError:        models.ErrUserNotFound,
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			name:           "Login or password empty",
 			method:         http.MethodPost,
 			body:           mustMarshal(t, models.AuthenticateIn{Login: "testuser", PasswordHash: "validhash"}),
-			ucError:        usecase.ErrLoginOrPasswordEmpty,
+			ucError:        models.ErrLoginOrPasswordEmpty,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{

@@ -1,4 +1,4 @@
-.PHONY: build-server build-cli run-server run-cli clean test
+.PHONY: build-server build-client run-server run-client clean test
 
 # Сборка сервера
 build-server:
@@ -9,7 +9,7 @@ build-client:
 	go build -o bin/gophkeeper-client ./cmd/gophkeeper-client
 
 # Сборка всех компонентов
-build: build-server build-cli
+build: build-server build-client
 
 # Запуск тестов
 test:
@@ -17,10 +17,11 @@ test:
 
 # Запуск сервера
 run-server: build-server
+	goose -dir ./internal/server/storage/migrations postgres "user=ibondar password=postgres dbname=gophkeeper sslmode=disable" up
 	./bin/gophkeeper-server
 
 # Запуск CLI клиента
-run-cli: build-cli
+run-client: build-client
 	./bin/gophkeeper-client
 
 # Очистка

@@ -45,15 +45,15 @@ func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Reque
 
 	result, err := handler.uc.Register(req.Context(), in)
 	if err != nil {
-		if errors.Is(err, usecase.ErrLoginOrPasswordEmpty) {
+		if errors.Is(err, models.ErrLoginOrPasswordEmpty) {
 			zap.L().Sugar().Debugln("Login or password is empty", zap.Error(err))
-			http.Error(res, err.Error(), http.StatusBadRequest)
+			http.Error(res, models.ErrLoginOrPasswordEmpty.Error(), http.StatusBadRequest)
 			return
 		}
 
-		if errors.Is(err, usecase.ErrUserAlreadyExists) {
+		if errors.Is(err, models.ErrUserAlreadyExists) {
 			zap.L().Sugar().Debugln("User already exists", zap.Error(err))
-			http.Error(res, err.Error(), http.StatusConflict)
+			http.Error(res, models.ErrUserAlreadyExists.Error(), http.StatusConflict)
 			return
 		}
 

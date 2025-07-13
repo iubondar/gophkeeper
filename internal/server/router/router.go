@@ -4,7 +4,6 @@ package router
 
 import (
 	handlers "gophkeeper/internal/server/api"
-	"gophkeeper/internal/server/compress"
 	"gophkeeper/internal/server/storage"
 	"gophkeeper/internal/server/usecase"
 	"net/http"
@@ -15,7 +14,7 @@ import (
 // Возвращает настроенный маршрутизатор и ошибку, если она возникла.
 func NewRouter(storage *storage.Storage) (chi.Router, error) {
 	router := chi.NewRouter()
-	router.Use(compress.WithGzipCompression)
+	// router.Use(compress.WithGzipCompression)
 
 	healthHandler := handlers.NewHealthHandler(storage)
 	router.Get("/health", healthHandler.Health)

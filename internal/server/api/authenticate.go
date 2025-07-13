@@ -45,13 +45,13 @@ func (handler AuthenticateHandler) Authenticate(res http.ResponseWriter, req *ht
 
 	result, err := handler.uc.Authenticate(req.Context(), in.Login, in.PasswordHash)
 	if err != nil {
-		if errors.Is(err, usecase.ErrLoginOrPasswordEmpty) {
+		if errors.Is(err, models.ErrLoginOrPasswordEmpty) {
 			zap.L().Sugar().Debugln("Login or password is empty", zap.Error(err))
 			http.Error(res, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		if errors.Is(err, usecase.ErrUserNotFound) {
+		if errors.Is(err, models.ErrUserNotFound) {
 			zap.L().Sugar().Debugln("User not found", zap.Error(err))
 			http.Error(res, err.Error(), http.StatusUnauthorized)
 			return

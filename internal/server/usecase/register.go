@@ -27,7 +27,7 @@ func NewRegisterUsecase(repo UserRepository) RegisterUsecase {
 
 func (uc *registerUsecase) Register(ctx context.Context, in models.RegisterIn) (out models.AuthenticateOut, err error) {
 	if len(in.Login) < 1 || len(in.PasswordHash) < 1 {
-		return models.AuthenticateOut{}, ErrLoginOrPasswordEmpty
+		return models.AuthenticateOut{}, models.ErrLoginOrPasswordEmpty
 	}
 
 	userID := uuid.New()
@@ -37,7 +37,7 @@ func (uc *registerUsecase) Register(ctx context.Context, in models.RegisterIn) (
 	}
 
 	if !ok {
-		return models.AuthenticateOut{}, ErrUserAlreadyExists
+		return models.AuthenticateOut{}, models.ErrUserAlreadyExists
 	}
 
 	return MakeAuthenticateOut(userID)
