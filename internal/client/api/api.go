@@ -72,6 +72,7 @@ func (c *APIClient) Login(ctx context.Context, in models.LoginIn) (salt string, 
 	}
 
 	var out models.LoginOut
+	fmt.Println(response.String())
 	err = json.Unmarshal(response.Body(), &out)
 	if err != nil {
 		return "", fmt.Errorf("failed to unmarshal login response: %w", err)

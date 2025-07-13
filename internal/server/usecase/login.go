@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 )
 
 type LoginUserRepository interface {
@@ -24,7 +25,7 @@ func NewLoginUsecase(repo LoginUserRepository) LoginUsecase {
 
 func (uc *loginUsecase) GetSalt(ctx context.Context, login string) (salt string, err error) {
 	if len(login) < 1 {
-		return "", nil
+		return "", fmt.Errorf("пустой логин")
 	}
 
 	return uc.repo.GetUserSalt(ctx, login)
