@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,7 +14,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestRegisterHandler_Register(t *testing.T) {
+func TestAuthenticateHandler_Authenticate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -30,37 +29,38 @@ func TestRegisterHandler_Register(t *testing.T) {
 		expectedBody   string
 	}{
 		{
-			name:   "Successful registration",
+			name:   "Successful authentication",
 			method: http.MethodPost,
-			body:   mustMarshal(t, models.RegisterIn{Login: "testuser", PasswordHash: "testpass", Salt: "testsalt"}),
+			body:   mustMarshal(t, models.AuthenticateIn{Login: "testuser", PasswordHash: "validhash"}),
 			ucResult: models.AuthenticateOut{
 				AccessToken:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
 				RefreshToken: "refresh-token-123",
 				ExpiresIn:    1800,
 			},
 			expectedStatus: http.StatusOK,
+			expectedBody:   `{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","refresh_token":"refresh-token-123","expires_in":1800}` + "\n",
 		},
 		{
-			name:           "User already exists",
+			name:           "Invalid credentials",
 			method:         http.MethodPost,
-			body:           mustMarshal(t, models.RegisterIn{Login: "testuser", PasswordHash: "testpass", Salt: "testsalt"}),
-			ucError:        usecase.ErrUserAlreadyExists,
-			expectedStatus: http.StatusConflict,
+			body:           mustMarshal(t, models.AuthenticateIn{Login: "testuser", PasswordHash: "invalidhash"}),
+			ucError:        usecase.ErrUserNotFound,
+			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			name:           "Login or password empty",
 			method:         http.MethodPost,
-			body:           mustMarshal(t, models.RegisterIn{Login: "testuser", PasswordHash: "testpass", Salt: "testsalt"}),
+			body:           mustMarshal(t, models.AuthenticateIn{Login: "testuser", PasswordHash: "validhash"}),
 			ucError:        usecase.ErrLoginOrPasswordEmpty,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "Usecase error",
 			method:         http.MethodPost,
-			body:           mustMarshal(t, models.RegisterIn{Login: "testuser", PasswordHash: "testpass", Salt: "testsalt"}),
+			body:           mustMarshal(t, models.AuthenticateIn{Login: "testuser", PasswordHash: "validhash"}),
 			ucError:        assert.AnError,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Failed to register user\n",
+			expectedBody:   "Failed to authenticate user\n",
 		},
 		{
 			name:           "Wrong HTTP method",
@@ -79,29 +79,29 @@ func TestRegisterHandler_Register(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup mock usecase
-			mockUc := mocks.NewMockRegisterUsecase(ctrl)
+			mockUc := mocks.NewMockAuthenticateUsecase(ctrl)
 			if tt.method == http.MethodPost && tt.name != "Invalid JSON" {
 				mockUc.EXPECT().
-					Register(gomock.Any(), gomock.Any()).
+					Authenticate(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(tt.ucResult, tt.ucError)
 			}
 
 			// Create handler
-			handler := NewRegisterHandler(mockUc)
+			handler := NewAuthenticateHandler(mockUc)
 
 			// Create request
 			var req *http.Request
 			if tt.method == http.MethodPost {
-				req = httptest.NewRequest(tt.method, "/api/user/register", bytes.NewBuffer(tt.body))
+				req = httptest.NewRequest(tt.method, "/api/authenticate", bytes.NewBuffer(tt.body))
 			} else {
-				req = httptest.NewRequest(tt.method, "/api/user/register", nil)
+				req = httptest.NewRequest(tt.method, "/api/authenticate", nil)
 			}
 
 			// Create response recorder
 			rr := httptest.NewRecorder()
 
 			// Call handler
-			handler.Register(rr, req)
+			handler.Authenticate(rr, req)
 
 			resp := rr.Result()
 			defer resp.Body.Close()
@@ -120,11 +120,4 @@ func TestRegisterHandler_Register(t *testing.T) {
 			}
 		})
 	}
-}
-
-func mustMarshal(t *testing.T, v any) []byte {
-	t.Helper()
-	data, err := json.Marshal(v)
-	assert.NoError(t, err)
-	return data
 }

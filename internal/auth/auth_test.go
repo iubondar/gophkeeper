@@ -19,33 +19,6 @@ func init() {
 	zap.ReplaceGlobals(logger)
 }
 
-func TestSetNewAuthCookie(t *testing.T) {
-	// Create a test user ID
-	userID := uuid.New()
-
-	// Create a response recorder
-	rr := httptest.NewRecorder()
-
-	// Call the function
-	err := SetNewAuthCookie(userID, rr)
-	require.NoError(t, err)
-
-	// Get the response cookies
-	resp := rr.Result()
-	defer resp.Body.Close()
-
-	cookies := resp.Cookies()
-	require.Len(t, cookies, 1)
-
-	// Check cookie properties
-	cookie := cookies[0]
-	assert.Equal(t, AuthCookieName, cookie.Name)
-	assert.True(t, cookie.HttpOnly)
-	assert.Equal(t, http.SameSiteLaxMode, cookie.SameSite)
-	assert.Equal(t, "/", cookie.Path)
-	assert.Equal(t, 3600, cookie.MaxAge)
-}
-
 func TestBuildJWTString(t *testing.T) {
 	// Create a test user ID
 	userID := uuid.New()

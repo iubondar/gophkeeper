@@ -8,8 +8,6 @@ import (
 	"gophkeeper/internal/server/storage/mocks"
 	"gophkeeper/internal/server/usecase"
 
-	"github.com/google/uuid"
-
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -20,13 +18,12 @@ func TestRegisterUsecase_Register(t *testing.T) {
 
 	// Test cases
 	tests := []struct {
-		name           string
-		in             models.RegisterIn
-		repoOk         bool
-		repoError      error
-		expectedUserID uuid.UUID
-		expectedOk     bool
-		expectedError  error
+		name          string
+		in            models.RegisterIn
+		repoOk        bool
+		repoError     error
+		expectedError error
+		expectSuccess bool
 	}{
 		{
 			name: "Successful registration",
@@ -35,9 +32,8 @@ func TestRegisterUsecase_Register(t *testing.T) {
 				PasswordHash: "testpass",
 				Salt:         "testsalt",
 			},
-			repoOk:         true,
-			expectedOk:     true,
-			expectedUserID: uuid.New(),
+			repoOk:        true,
+			expectSuccess: true,
 		},
 		{
 			name: "Empty login",
@@ -46,7 +42,7 @@ func TestRegisterUsecase_Register(t *testing.T) {
 				PasswordHash: "testpass",
 				Salt:         "testsalt",
 			},
-			expectedOk: false,
+			expectedError: usecase.ErrLoginOrPasswordEmpty,
 		},
 		{
 			name: "Empty password",
@@ -55,7 +51,7 @@ func TestRegisterUsecase_Register(t *testing.T) {
 				PasswordHash: "",
 				Salt:         "testsalt",
 			},
-			expectedOk: false,
+			expectedError: usecase.ErrLoginOrPasswordEmpty,
 		},
 		{
 			name: "User already exists",
@@ -64,8 +60,8 @@ func TestRegisterUsecase_Register(t *testing.T) {
 				PasswordHash: "testpass",
 				Salt:         "testsalt",
 			},
-			repoOk:     false,
-			expectedOk: false,
+			repoOk:        false,
+			expectedError: usecase.ErrUserAlreadyExists,
 		},
 		{
 			name: "Repository error",
@@ -93,14 +89,18 @@ func TestRegisterUsecase_Register(t *testing.T) {
 			uc := usecase.NewRegisterUsecase(mockRepo)
 
 			// Call usecase
-			userID, ok, err := uc.Register(context.Background(), tt.in)
+			result, err := uc.Register(context.Background(), tt.in)
 
 			// Check results
-			if tt.expectedUserID != uuid.Nil {
-				assert.NotEqual(t, uuid.Nil, userID)
+			if tt.expectSuccess {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, result.AccessToken)
+				assert.NotEmpty(t, result.RefreshToken)
+				assert.Equal(t, 1800, result.ExpiresIn)
+			} else {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedError, err)
 			}
-			assert.Equal(t, tt.expectedOk, ok)
-			assert.Equal(t, tt.expectedError, err)
 		})
 	}
 }

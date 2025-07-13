@@ -10,12 +10,30 @@ import (
 )
 
 type APIClient struct {
-	httpc *resty.Client
+	httpc        *resty.Client
+	accessToken  string
+	refreshToken string
+	expiresIn    int
 }
 
 func NewAPIClient(serverURL string) *APIClient {
 	client := resty.New().SetBaseURL(serverURL)
 	return &APIClient{httpc: client}
+}
+
+// handleAuthenticateResponse обрабатывает ответ аутентификации и обновляет токены в клиенте
+func (c *APIClient) handleAuthenticateResponse(responseBody []byte) error {
+	var out models.AuthenticateOut
+	err := json.Unmarshal(responseBody, &out)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal authenticate response: %w", err)
+	}
+
+	c.accessToken = out.AccessToken
+	c.refreshToken = out.RefreshToken
+	c.expiresIn = out.ExpiresIn
+
+	return nil
 }
 
 func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
@@ -32,7 +50,7 @@ func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
 		return fmt.Errorf("failed to register: %s", response.String())
 	}
 
-	return nil
+	return c.handleAuthenticateResponse(response.Body())
 }
 
 // Login выполняет запрос на вход в систему
@@ -57,4 +75,21 @@ func (c *APIClient) Login(ctx context.Context, in models.LoginIn) (salt string, 
 	}
 
 	return out.Salt, nil
+}
+
+func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) error {
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		SetBody(in).
+		Post("/api/authenticate")
+
+	if err != nil {
+		return err
+	}
+
+	if response.IsError() {
+		return fmt.Errorf("failed to authenticate: %s", response.String())
+	}
+
+	return c.handleAuthenticateResponse(response.Body())
 }

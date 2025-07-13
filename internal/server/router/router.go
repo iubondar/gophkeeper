@@ -22,12 +22,13 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 
 	registerHandler := handlers.NewRegisterHandler(usecase.NewRegisterUsecase(storage))
 	loginHandler := handlers.NewLoginHandler(usecase.NewLoginUsecase(storage))
+	authenticateHandler := handlers.NewAuthenticateHandler(usecase.NewAuthenticateUsecase(storage))
 
 	// API маршруты
 	router.Route("/api", func(r chi.Router) {
 		r.Post("/register", registerHandler.Register)
 		r.Post("/login", loginHandler.Login)
-		r.Post("/authenticate", handleAuthenticate)
+		r.Post("/authenticate", authenticateHandler.Authenticate)
 		r.Post("/refresh", handleRefresh)
 
 		r.Post("/passwords", handleCreatePassword)
@@ -40,11 +41,6 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 	})
 
 	return router, nil
-}
-
-func handleAuthenticate(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"access_token": "test-token", "refresh_token": "test-refresh", "expires_in": 1800}`))
 }
 
 func handleRefresh(w http.ResponseWriter, r *http.Request) {

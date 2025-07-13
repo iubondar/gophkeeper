@@ -12,23 +12,23 @@ import (
 	"go.uber.org/zap"
 )
 
-type RegisterHandler struct {
-	uc usecase.RegisterUsecase
+type AuthenticateHandler struct {
+	uc usecase.AuthenticateUsecase
 }
 
-func NewRegisterHandler(uc usecase.RegisterUsecase) *RegisterHandler {
-	return &RegisterHandler{
+func NewAuthenticateHandler(uc usecase.AuthenticateUsecase) *AuthenticateHandler {
+	return &AuthenticateHandler{
 		uc: uc,
 	}
 }
 
-func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Request) {
+func (handler AuthenticateHandler) Authenticate(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(res, "Only POST requests are allowed!", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var in models.RegisterIn
+	var in models.AuthenticateIn
 	var buf bytes.Buffer
 	// читаем тело запроса
 	_, err := buf.ReadFrom(req.Body)
@@ -43,7 +43,7 @@ func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	result, err := handler.uc.Register(req.Context(), in)
+	result, err := handler.uc.Authenticate(req.Context(), in.Login, in.PasswordHash)
 	if err != nil {
 		if errors.Is(err, usecase.ErrLoginOrPasswordEmpty) {
 			zap.L().Sugar().Debugln("Login or password is empty", zap.Error(err))
@@ -51,14 +51,14 @@ func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Reque
 			return
 		}
 
-		if errors.Is(err, usecase.ErrUserAlreadyExists) {
-			zap.L().Sugar().Debugln("User already exists", zap.Error(err))
-			http.Error(res, err.Error(), http.StatusConflict)
+		if errors.Is(err, usecase.ErrUserNotFound) {
+			zap.L().Sugar().Debugln("User not found", zap.Error(err))
+			http.Error(res, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
-		zap.L().Sugar().Debugln("Failed to register user", zap.Error(err))
-		http.Error(res, "Failed to register user", http.StatusInternalServerError)
+		zap.L().Sugar().Debugln("Failed to authenticate user", zap.Error(err))
+		http.Error(res, "Failed to authenticate user", http.StatusInternalServerError)
 		return
 	}
 
@@ -70,6 +70,4 @@ func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Reque
 		http.Error(res, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
-
-	res.WriteHeader(http.StatusOK)
 }

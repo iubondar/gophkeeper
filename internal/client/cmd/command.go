@@ -21,6 +21,7 @@ type Command interface {
 type GophKeeperClient interface {
 	Register(ctx context.Context, in models.RegisterIn) error
 	Login(ctx context.Context, in models.LoginIn) (salt string, err error)
+	Authenticate(ctx context.Context, in models.AuthenticateIn) error
 }
 
 // CommandRegistry управляет реестром команд

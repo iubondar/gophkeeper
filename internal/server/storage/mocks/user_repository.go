@@ -42,21 +42,6 @@ func (m *MockUserRepository) EXPECT() *MockUserRepositoryMockRecorder {
 	return m.recorder
 }
 
-// GetUserSalt mocks base method.
-func (m *MockUserRepository) GetUserSalt(ctx context.Context, login string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUserSalt", ctx, login)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetUserSalt indicates an expected call of GetUserSalt.
-func (mr *MockUserRepositoryMockRecorder) GetUserSalt(ctx, login any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserSalt", reflect.TypeOf((*MockUserRepository)(nil).GetUserSalt), ctx, login)
-}
-
 // Register mocks base method.
 func (m *MockUserRepository) Register(ctx context.Context, userID uuid.UUID, login, passwordHash, salt string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -97,13 +82,12 @@ func (m *MockRegisterUsecase) EXPECT() *MockRegisterUsecaseMockRecorder {
 }
 
 // Register mocks base method.
-func (m *MockRegisterUsecase) Register(ctx context.Context, in models.RegisterIn) (uuid.UUID, bool, error) {
+func (m *MockRegisterUsecase) Register(ctx context.Context, in models.RegisterIn) (models.AuthenticateOut, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Register", ctx, in)
-	ret0, _ := ret[0].(uuid.UUID)
-	ret1, _ := ret[1].(bool)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(models.AuthenticateOut)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Register indicates an expected call of Register.

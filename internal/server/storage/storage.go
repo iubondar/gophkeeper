@@ -62,3 +62,15 @@ func (s *Storage) GetUserSalt(ctx context.Context, login string) (salt string, e
 	}
 	return salt, nil
 }
+
+func (s *Storage) GetUserByLoginAndPassword(ctx context.Context, login string, passwordHash string) (userID uuid.UUID, err error) {
+	err = s.db.QueryRowContext(ctx, queries.GetUserByLoginAndPassword, login, passwordHash).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return uuid.Nil, nil
+		}
+		zap.L().Sugar().Debugln("Error getting user by login and password:", err.Error())
+		return uuid.Nil, err
+	}
+	return userID, nil
+}

@@ -9,6 +9,7 @@ import (
 
 type LoginAPIClient interface {
 	Login(ctx context.Context, in models.LoginIn) (salt string, err error)
+	Authenticate(ctx context.Context, in models.AuthenticateIn) error
 }
 
 // LoginCommand обрабатывает команду входа
@@ -47,8 +48,20 @@ func (c *LoginCommand) Execute(ctx context.Context, args any) error {
 	}
 
 	c.crypto.SetSalt(salt)
+	passwordHash, err := c.crypto.GeneratePasswordHash(credentials.Password)
+	if err != nil {
+		return fmt.Errorf("ошибка при генерации пароля: %w", err)
+	}
 
-	// TODO: вызвать метод authenticate с паролем и солью
+	// Выполняем аутентификацию через API клиент
+	authenticateBody := models.AuthenticateIn{
+		Login:        credentials.Login,
+		PasswordHash: passwordHash,
+	}
+	err = c.apiClient.Authenticate(ctx, authenticateBody)
+	if err != nil {
+		return fmt.Errorf("ошибка при аутентификации: %w", err)
+	}
 
 	return nil
 }

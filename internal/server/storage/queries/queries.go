@@ -9,4 +9,8 @@ const (
 	GetUserSalt = `
 		SELECT salt FROM users WHERE login = $1
 	`
+
+	GetUserByLoginAndPassword = `
+		SELECT id FROM users WHERE login = $1 AND password_hash = $2
+	`
 )

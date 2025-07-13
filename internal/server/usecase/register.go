@@ -12,7 +12,7 @@ type UserRepository interface {
 }
 
 type RegisterUsecase interface {
-	Register(ctx context.Context, in models.RegisterIn) (userID uuid.UUID, ok bool, err error)
+	Register(ctx context.Context, in models.RegisterIn) (out models.AuthenticateOut, err error)
 }
 
 type registerUsecase struct {
@@ -25,16 +25,20 @@ func NewRegisterUsecase(repo UserRepository) RegisterUsecase {
 	}
 }
 
-func (uc *registerUsecase) Register(ctx context.Context, in models.RegisterIn) (userID uuid.UUID, ok bool, err error) {
+func (uc *registerUsecase) Register(ctx context.Context, in models.RegisterIn) (out models.AuthenticateOut, err error) {
 	if len(in.Login) < 1 || len(in.PasswordHash) < 1 {
-		return uuid.Nil, false, nil
+		return models.AuthenticateOut{}, ErrLoginOrPasswordEmpty
 	}
 
-	userID = uuid.New()
-	ok, err = uc.repo.Register(ctx, userID, in.Login, in.PasswordHash, in.Salt)
+	userID := uuid.New()
+	ok, err := uc.repo.Register(ctx, userID, in.Login, in.PasswordHash, in.Salt)
 	if err != nil {
-		return uuid.Nil, false, err
+		return models.AuthenticateOut{}, err
 	}
 
-	return userID, ok, nil
+	if !ok {
+		return models.AuthenticateOut{}, ErrUserAlreadyExists
+	}
+
+	return MakeAuthenticateOut(userID)
 }
