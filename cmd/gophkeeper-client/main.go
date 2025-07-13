@@ -3,6 +3,7 @@ package main
 import (
 	"gophkeeper/internal/client/api"
 	"gophkeeper/internal/client/cmd"
+	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/client/shell"
 	"gophkeeper/internal/config"
 	"log"
@@ -16,7 +17,8 @@ func main() {
 	}
 
 	apiClient := api.NewAPIClient(config.RunAddress)
-	commandRegistry := cmd.NewCommandRegistry(apiClient)
+	crypto := crypto.NewCrypto()
+	commandRegistry := cmd.NewCommandRegistry(apiClient, crypto)
 
 	// Создаем и запускаем интерактивный интерфейс
 	shell := shell.NewShell(commandRegistry)

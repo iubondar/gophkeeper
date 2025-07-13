@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
 )
 
@@ -13,15 +14,17 @@ type RegisterAPIClient interface {
 // RegisterCommand обрабатывает команду регистрации
 type RegisterCommand struct {
 	apiClient RegisterAPIClient
+	crypto    *crypto.Crypto
 }
 
 // RegisterCommand реализует интерфейс Command
 var _ Command = (*RegisterCommand)(nil)
 
 // NewRegisterCommand создает новую команду регистрации
-func NewRegisterCommand(apiClient RegisterAPIClient) *RegisterCommand {
+func NewRegisterCommand(apiClient RegisterAPIClient, crypto *crypto.Crypto) *RegisterCommand {
 	return &RegisterCommand{
 		apiClient: apiClient,
+		crypto:    crypto,
 	}
 }
 
@@ -32,20 +35,25 @@ func (c *RegisterCommand) Execute(ctx context.Context, args any) error {
 		return fmt.Errorf("неверный тип аргументов для команды регистрации")
 	}
 
+	salt := c.crypto.GenerateAndSetSalt()
+	passwordHash, err := c.crypto.GeneratePasswordHash(credentials.Password)
+	if err != nil {
+		return fmt.Errorf("ошибка при генерации хеша пароля: %w", err)
+	}
+
 	// Создаем запрос для регистрации
 	requestBody := models.RegisterIn{
 		Login:        credentials.Login,
-		PasswordHash: credentials.Password,
-		Salt:         "test-salt", // TODO: реализовать генерацию соли
+		PasswordHash: passwordHash,
+		Salt:         salt,
 	}
 
 	// Выполняем регистрацию через API клиент
-	err := c.apiClient.Register(ctx, requestBody)
+	err = c.apiClient.Register(ctx, requestBody)
 	if err != nil {
 		return fmt.Errorf("ошибка при регистрации: %w", err)
 	}
 
-	fmt.Println("✅ Регистрация успешна!")
 	return nil
 }
 

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
 )
 
@@ -28,13 +29,13 @@ type CommandRegistry struct {
 }
 
 // NewCommandRegistry создает новый реестр команд
-func NewCommandRegistry(apiClient GophKeeperClient) *CommandRegistry {
+func NewCommandRegistry(apiClient GophKeeperClient, crypto *crypto.Crypto) *CommandRegistry {
 	registry := CommandRegistry{
 		commands: make(map[string]Command),
 	}
 
-	registry.registerCommand(NewRegisterCommand(apiClient))
-	registry.registerCommand(NewLoginCommand(apiClient))
+	registry.registerCommand(NewRegisterCommand(apiClient, crypto))
+	registry.registerCommand(NewLoginCommand(apiClient, crypto))
 
 	return &registry
 }

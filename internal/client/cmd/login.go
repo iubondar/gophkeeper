@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
 )
 
@@ -13,15 +14,17 @@ type LoginAPIClient interface {
 // LoginCommand обрабатывает команду входа
 type LoginCommand struct {
 	apiClient LoginAPIClient
+	crypto    *crypto.Crypto
 }
 
 // LoginCommand реализует интерфейс Command
 var _ Command = (*LoginCommand)(nil)
 
 // NewLoginCommand создает новую команду входа
-func NewLoginCommand(apiClient LoginAPIClient) *LoginCommand {
+func NewLoginCommand(apiClient LoginAPIClient, crypto *crypto.Crypto) *LoginCommand {
 	return &LoginCommand{
 		apiClient: apiClient,
+		crypto:    crypto,
 	}
 }
 
@@ -44,7 +47,6 @@ func (c *LoginCommand) Execute(ctx context.Context, args any) error {
 		return fmt.Errorf("ошибка при входе: %w", err)
 	}
 
-	fmt.Println("✅ Вход выполнен успешно!")
 	return nil
 }
 
