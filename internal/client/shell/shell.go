@@ -53,14 +53,51 @@ func (s *Shell) Run() error {
 			return nil
 		}
 
-		// Проверяем команду возврата
-		if s.menuManager.IsBackCommand(commandName) {
+		// Проверяем команду выхода из аккаунта
+		if s.menuManager.IsLogoutCommand(commandName) {
 			s.menuManager.SwitchToState("main")
+			s.menuManager.ClearActionState()
+			fmt.Println("✅ Вы вышли из аккаунта")
 			fmt.Println()
 			continue
 		}
 
-		// Выполняем команду
+		// Проверяем команду возврата
+		if s.menuManager.IsBackCommand(commandName) {
+			if s.menuManager.GoBack() {
+				fmt.Println()
+			} else {
+				fmt.Println("Нельзя вернуться назад")
+			}
+			continue
+		}
+
+		// Обрабатываем команды действий (upload, update, get, delete)
+		if s.menuManager.IsActionCommand(commandName) {
+			s.menuManager.SetActionState(commandName, "")
+			s.menuManager.SwitchToState("data_type")
+			fmt.Println()
+			continue
+		}
+
+		// Обрабатываем команды выбора типа данных
+		if s.menuManager.IsDataTypeCommand(commandName) {
+			actionState := s.menuManager.GetActionState()
+			if actionState != nil {
+				actionState.Type = commandName
+				if err := s.executeActionWithType(actionState.Action, actionState.Type); err != nil {
+					fmt.Printf("Ошибка: %v\n", err)
+				} else {
+					s.printSuccessMessage(actionState.Action)
+				}
+				s.menuManager.ClearActionState()
+				s.menuManager.SwitchToState("authenticated")
+			}
+			fmt.Println()
+			continue
+		}
+
+		// Выполняем обычные команды
 		if err := s.executeCommand(commandName); err != nil {
 			fmt.Printf("Ошибка: %v\n", err)
 		} else {
@@ -95,14 +132,47 @@ func (s *Shell) executeCommand(commandName string) error {
 		}
 		return s.commandRegistry.Execute(ctx, commandName, *credentials)
 
-	case "upload", "update", "get", "delete":
-		// Пока просто выводим сообщение о том, что команда не реализована
-		fmt.Printf("Команда '%s' пока не реализована\n", commandName)
-		return nil
-
 	default:
 		return fmt.Errorf("неизвестная команда: %s", commandName)
 	}
+}
+
+// executeActionWithType выполняет действие с выбранным типом данных через команды
+func (s *Shell) executeActionWithType(action, dataType string) error {
+	ctx := context.Background()
+
+	// Получаем данные в зависимости от типа
+	var data any
+	var err error
+
+	switch dataType {
+	case "text":
+		data, err = s.inputHandler.GetTextData()
+	case "login_password":
+		data, err = s.inputHandler.GetLoginPasswordData()
+	case "card":
+		data, err = s.inputHandler.GetCardData()
+	case "file":
+		data, err = s.inputHandler.GetFileData()
+	default:
+		return fmt.Errorf("неизвестный тип данных: %s", dataType)
+	}
+
+	if err != nil {
+		return fmt.Errorf("ошибка получения данных: %w", err)
+	}
+
+	// Для операций get и delete нужен только название секрета
+	if action == "get" || action == "delete" {
+		secretName, err := s.inputHandler.GetSecretName()
+		if err != nil {
+			return fmt.Errorf("ошибка получения названия секрета: %w", err)
+		}
+		data = secretName
+	}
+
+	// Выполняем команду через реестр команд
+	return s.commandRegistry.Execute(ctx, action, data)
 }
 
 func (s *Shell) printSuccessMessage(commandName string) {
@@ -111,6 +181,14 @@ func (s *Shell) printSuccessMessage(commandName string) {
 		fmt.Println("✅ Регистрация успешна!")
 	case "login":
 		fmt.Println("✅ Вход выполнен успешно!")
+	case "upload":
+		fmt.Println("✅ Секрет успешно загружен!")
+	case "update":
+		fmt.Println("✅ Секрет успешно обновлен!")
+	case "get":
+		fmt.Println("✅ Секрет успешно получен!")
+	case "delete":
+		fmt.Println("✅ Секрет успешно удален!")
 	default:
 		fmt.Printf("✅ %s выполнена успешно!\n", commandName)
 	}

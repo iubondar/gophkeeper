@@ -91,3 +91,31 @@ func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) 
 
 	return c.handleAuthenticateResponse(response.Body())
 }
+
+// UploadSecret загружает секрет на сервер
+func (c *APIClient) UploadSecret(ctx context.Context, secret models.SecretData) error {
+	// TODO: Implement
+
+	return nil
+}
+
+// UpdateSecret обновляет секрет на сервере
+func (c *APIClient) UpdateSecret(ctx context.Context, secret models.SecretData) error {
+	// TODO: Implement
+
+	return nil
+}
+
+// GetSecret получает секрет с сервера
+func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.SecretData, error) {
+	// TODO: Implement
+
+	return nil, nil
+}
+
+// DeleteSecret удаляет секрет с сервера
+func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
+	// TODO: Implement
+
+	return nil
+}

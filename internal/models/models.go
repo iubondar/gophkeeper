@@ -35,3 +35,39 @@ type UserCredentials struct {
 	Login    string
 	Password string
 }
+
+// SecretData представляет данные секрета
+type SecretData struct {
+	Name string
+	Type string
+	Data string
+}
+
+// TextSecretData представляет данные текстового секрета
+type TextSecretData struct {
+	Name string
+	Text string
+}
+
+// LoginPasswordData представляет данные логина и пароля
+type LoginPasswordData struct {
+	Name     string
+	Login    string
+	Password string
+	URL      string
+}
+
+// CardData представляет данные банковской карты
+type CardData struct {
+	Name   string
+	Number string
+	Holder string
+	Expiry string
+	CVV    string
+}
+
+// FileData представляет данные файла
+type FileData struct {
+	Name     string
+	FilePath string
+}
