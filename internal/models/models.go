@@ -22,7 +22,6 @@ type AuthenticateIn struct {
 type AuthenticateOut struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int    `json:"expires_in"`
 }
 
 type AuthenticateResult struct {

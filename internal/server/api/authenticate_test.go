@@ -35,10 +35,9 @@ func TestAuthenticateHandler_Authenticate(t *testing.T) {
 			ucResult: models.AuthenticateOut{
 				AccessToken:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
 				RefreshToken: "refresh-token-123",
-				ExpiresIn:    1800,
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","refresh_token":"refresh-token-123","expires_in":1800}` + "\n",
+			expectedBody:   `{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","refresh_token":"refresh-token-123"}` + "\n",
 		},
 		{
 			name:           "Invalid credentials",

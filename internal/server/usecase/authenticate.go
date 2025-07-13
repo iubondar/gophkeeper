@@ -9,10 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	refreshTokenLifetime = 1800
-)
-
 type AuthenticateUserRepository interface {
 	GetUserByLoginAndPassword(ctx context.Context, login string, passwordHash string) (userID uuid.UUID, err error)
 }
@@ -51,21 +47,19 @@ func (uc *authenticateUsecase) Authenticate(ctx context.Context, login string, p
 
 func MakeAuthenticateOut(userID uuid.UUID) (out models.AuthenticateOut, err error) {
 	// Генерируем access token
-	accessToken, err := auth.BuildJWTString(userID)
+	accessToken, err := auth.GenerateAccessToken(userID.String())
 	if err != nil {
 		return models.AuthenticateOut{}, err
 	}
 
-	// Генерируем refresh token (в данном случае используем UUID как refresh token)
-	// TODO: использовать JWT как refresh token
-	refreshToken := uuid.New().String()
-
-	// Устанавливаем время жизни токена (30 минут)
-	expiresIn := refreshTokenLifetime
+	// Генерируем refresh token
+	refreshToken, err := auth.GenerateRefreshToken(userID.String())
+	if err != nil {
+		return models.AuthenticateOut{}, err
+	}
 
 	return models.AuthenticateOut{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    expiresIn,
 	}, nil
 }

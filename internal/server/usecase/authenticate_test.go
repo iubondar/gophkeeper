@@ -84,11 +84,9 @@ func TestAuthenticateUsecase_Authenticate(t *testing.T) {
 				if tt.expectSuccess {
 					assert.NotEmpty(t, result.AccessToken)
 					assert.NotEmpty(t, result.RefreshToken)
-					assert.Equal(t, 1800, result.ExpiresIn)
 				} else {
 					assert.Empty(t, result.AccessToken)
 					assert.Empty(t, result.RefreshToken)
-					assert.Equal(t, 0, result.ExpiresIn)
 				}
 			}
 		})

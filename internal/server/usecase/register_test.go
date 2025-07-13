@@ -96,7 +96,6 @@ func TestRegisterUsecase_Register(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotEmpty(t, result.AccessToken)
 				assert.NotEmpty(t, result.RefreshToken)
-				assert.Equal(t, 1800, result.ExpiresIn)
 			} else {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedError, err)

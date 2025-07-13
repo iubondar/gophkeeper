@@ -19,26 +19,48 @@ func init() {
 	zap.ReplaceGlobals(logger)
 }
 
-func TestBuildJWTString(t *testing.T) {
+func TestGenerateAccessToken(t *testing.T) {
 	// Create a test user ID
-	userID := uuid.New()
+	userID := uuid.New().String()
 
 	// Call the function
-	tokenString, err := BuildJWTString(userID)
+	tokenString, err := GenerateAccessToken(userID)
 	require.NoError(t, err)
 	assert.NotEmpty(t, tokenString)
 
 	// Parse the token to verify its contents
-	token, err := jwt.ParseWithClaims(tokenString, &claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
 	})
 	require.NoError(t, err)
 	assert.True(t, token.Valid)
 
 	// Verify claims
-	claims, ok := token.Claims.(*claims)
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 	require.True(t, ok)
-	assert.Equal(t, userID, claims.UserID)
+	assert.Equal(t, userID, claims.Subject)
+}
+
+func TestGenerateRefreshToken(t *testing.T) {
+	// Create a test user ID
+	userID := uuid.New().String()
+
+	// Call the function
+	tokenString, err := GenerateRefreshToken(userID)
+	require.NoError(t, err)
+	assert.NotEmpty(t, tokenString)
+
+	// Parse the token to verify its contents
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+	require.NoError(t, err)
+	assert.True(t, token.Valid)
+
+	// Verify claims
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
+	require.True(t, ok)
+	assert.Equal(t, userID, claims.Subject)
 }
 
 func TestGetUserIDFromReq(t *testing.T) {
@@ -46,7 +68,7 @@ func TestGetUserIDFromReq(t *testing.T) {
 	userID := uuid.New()
 
 	// Create a valid JWT token
-	tokenString, err := BuildJWTString(userID)
+	tokenString, err := GenerateAccessToken(userID.String())
 	require.NoError(t, err)
 
 	// Create a request with the cookie
@@ -73,7 +95,7 @@ func TestGetUserID(t *testing.T) {
 	userID := uuid.New()
 
 	// Test valid token
-	tokenString, err := BuildJWTString(userID)
+	tokenString, err := GenerateAccessToken(userID.String())
 	require.NoError(t, err)
 
 	extractedUserID, err := getUserID(tokenString)
@@ -85,11 +107,9 @@ func TestGetUserID(t *testing.T) {
 	assert.Error(t, err)
 
 	// Test expired token
-	expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
-		},
-		UserID: userID,
+	expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Subject:   userID.String(),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
 	})
 	expiredTokenString, err := expiredToken.SignedString([]byte(secretKey))
 	require.NoError(t, err)

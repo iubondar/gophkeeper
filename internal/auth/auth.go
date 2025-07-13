@@ -3,6 +3,7 @@ package auth
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -20,23 +21,23 @@ type claims struct {
 	UserID uuid.UUID
 }
 
-// BuildJWTString создаёт токен и возвращает его в виде строки.
-func BuildJWTString(userID uuid.UUID) (string, error) {
-	// создаём новый токен с алгоритмом подписи HS256 и утверждениями — Claims
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims{
-		RegisteredClaims: jwt.RegisteredClaims{},
-		// собственное утверждение
-		UserID: userID,
-	})
+func GenerateAccessToken(userID string) (string, error) {
+	return generateToken(userID, 15*time.Minute)
+}
 
-	// создаём строку токена
-	tokenString, err := token.SignedString([]byte(secretKey))
-	if err != nil {
-		return "", err
+func GenerateRefreshToken(userID string) (string, error) {
+	return generateToken(userID, 7*24*time.Hour) // 7 дней
+}
+
+func generateToken(userID string, duration time.Duration) (string, error) {
+	claims := jwt.RegisteredClaims{
+		Subject:   userID,
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
 	}
 
-	// возвращаем строку токена
-	return tokenString, nil
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(secretKey)
 }
 
 func GetUserIDFromReq(req *http.Request) (userID uuid.UUID, err error) {

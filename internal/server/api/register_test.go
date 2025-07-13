@@ -36,7 +36,6 @@ func TestRegisterHandler_Register(t *testing.T) {
 			ucResult: models.AuthenticateOut{
 				AccessToken:  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
 				RefreshToken: "refresh-token-123",
-				ExpiresIn:    1800,
 			},
 			expectedStatus: http.StatusOK,
 		},

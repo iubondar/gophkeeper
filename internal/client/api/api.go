@@ -13,7 +13,6 @@ type APIClient struct {
 	httpc        *resty.Client
 	accessToken  string
 	refreshToken string
-	expiresIn    int
 }
 
 func NewAPIClient(serverURL string) *APIClient {
@@ -31,7 +30,6 @@ func (c *APIClient) handleAuthenticateResponse(responseBody []byte) error {
 
 	c.accessToken = out.AccessToken
 	c.refreshToken = out.RefreshToken
-	c.expiresIn = out.ExpiresIn
 
 	return nil
 }
