@@ -21,11 +21,12 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 	router.Get("/health", healthHandler.Health)
 
 	registerHandler := handlers.NewRegisterHandler(usecase.NewRegisterUsecase(storage))
+	loginHandler := handlers.NewLoginHandler(usecase.NewLoginUsecase(storage))
 
 	// API маршруты
 	router.Route("/api", func(r chi.Router) {
 		r.Post("/register", registerHandler.Register)
-		r.Post("/login", handleLogin)
+		r.Post("/login", loginHandler.Login)
 		r.Post("/authenticate", handleAuthenticate)
 		r.Post("/refresh", handleRefresh)
 
@@ -39,12 +40,6 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 	})
 
 	return router, nil
-}
-
-// Заглушки для обработчиков
-func handleLogin(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"salt": "dGVzdC1zYWx0"}`))
 }
 
 func handleAuthenticate(w http.ResponseWriter, r *http.Request) {

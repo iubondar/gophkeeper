@@ -50,3 +50,15 @@ func (s *Storage) Register(ctx context.Context, userID uuid.UUID, login string, 
 
 	return true, nil
 }
+
+func (s *Storage) GetUserSalt(ctx context.Context, login string) (salt string, err error) {
+	err = s.db.QueryRowContext(ctx, queries.GetUserSalt, login).Scan(&salt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
+		zap.L().Sugar().Debugln("Error getting user salt:", err.Error())
+		return "", err
+	}
+	return salt, nil
+}

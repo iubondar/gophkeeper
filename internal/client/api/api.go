@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"gophkeeper/internal/models"
 
@@ -35,20 +36,25 @@ func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
 }
 
 // Login выполняет запрос на вход в систему
-// TODO: добавить salt в ответ сервера
-func (c *APIClient) Login(ctx context.Context, in models.LoginIn) error {
+func (c *APIClient) Login(ctx context.Context, in models.LoginIn) (salt string, err error) {
 	response, err := c.httpc.R().
 		SetContext(ctx).
 		SetBody(in).
 		Post("/api/login")
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if response.IsError() {
-		return fmt.Errorf("failed to login: %s", response.String())
+		return "", fmt.Errorf("failed to login: %s", response.String())
 	}
 
-	return nil
+	var out models.LoginOut
+	err = json.Unmarshal(response.Body(), &out)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal login response: %w", err)
+	}
+
+	return out.Salt, nil
 }

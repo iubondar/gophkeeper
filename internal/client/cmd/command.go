@@ -20,7 +20,7 @@ type Command interface {
 // GophKeeperClient это интерфейс для работы с API сервера, который предоставляет все API методы
 type GophKeeperClient interface {
 	Register(ctx context.Context, in models.RegisterIn) error
-	Login(ctx context.Context, in models.LoginIn) error
+	Login(ctx context.Context, in models.LoginIn) (salt string, err error)
 }
 
 // CommandRegistry управляет реестром команд
