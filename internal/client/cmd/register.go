@@ -15,6 +15,9 @@ type RegisterCommand struct {
 	apiClient RegisterAPIClient
 }
 
+// RegisterCommand реализует интерфейс Command
+var _ Command = (*RegisterCommand)(nil)
+
 // NewRegisterCommand создает новую команду регистрации
 func NewRegisterCommand(apiClient RegisterAPIClient) *RegisterCommand {
 	return &RegisterCommand{

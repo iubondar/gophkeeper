@@ -16,14 +16,10 @@ func main() {
 	}
 
 	apiClient := api.NewAPIClient(config.RunAddress)
-	commandFactory := cmd.NewCommandFactory(apiClient)
-
-	// Создаем реестр команд
-	commandRegistry := commandFactory.CreateCommandRegistry()
-	commandExecutor := cmd.NewCommandExecutor(commandRegistry)
+	commandRegistry := cmd.NewCommandRegistry(apiClient)
 
 	// Создаем и запускаем интерактивный интерфейс
-	shell := shell.NewShell(commandExecutor)
+	shell := shell.NewShell(commandRegistry)
 	if err := shell.Run(); err != nil {
 		log.Fatal(err)
 	}

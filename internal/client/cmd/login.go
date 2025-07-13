@@ -15,6 +15,9 @@ type LoginCommand struct {
 	apiClient LoginAPIClient
 }
 
+// LoginCommand реализует интерфейс Command
+var _ Command = (*LoginCommand)(nil)
+
 // NewLoginCommand создает новую команду входа
 func NewLoginCommand(apiClient LoginAPIClient) *LoginCommand {
 	return &LoginCommand{

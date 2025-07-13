@@ -34,6 +34,8 @@ func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
 	return nil
 }
 
+// Login выполняет запрос на вход в систему
+// TODO: добавить salt в ответ сервера
 func (c *APIClient) Login(ctx context.Context, in models.LoginIn) error {
 	response, err := c.httpc.R().
 		SetContext(ctx).

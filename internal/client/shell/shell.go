@@ -8,15 +8,15 @@ import (
 
 // Shell представляет интерактивный интерфейс для работы с GophKeeper
 type Shell struct {
-	commandExecutor *cmd.CommandExecutor
+	commandRegistry *cmd.CommandRegistry
 	menuManager     *MenuManager
 	inputHandler    *InputHandler
 }
 
 // NewShell создает новый экземпляр Shell
-func NewShell(executor *cmd.CommandExecutor) *Shell {
+func NewShell(registry *cmd.CommandRegistry) *Shell {
 	return &Shell{
-		commandExecutor: executor,
+		commandRegistry: registry,
 		menuManager:     NewMenuManager(),
 		inputHandler:    NewInputHandler(),
 	}
@@ -64,7 +64,9 @@ func (s *Shell) Run() error {
 		if err := s.executeCommand(commandName); err != nil {
 			fmt.Printf("Ошибка: %v\n", err)
 		} else {
-			// Если команда выполнена успешно и это авторизация, переключаем состояние
+			s.printSuccessMessage(commandName)
+
+			// Если это авторизация или регистрация, переключаем состояние
 			if (commandName == "register" || commandName == "login") && s.menuManager.GetCurrentState() == "main" {
 				fmt.Println("Переключение в меню пользователя...")
 				s.menuManager.SwitchToState("authenticated")
@@ -84,14 +86,14 @@ func (s *Shell) executeCommand(commandName string) error {
 		if err != nil {
 			return fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
-		return s.commandExecutor.Execute(ctx, commandName, *credentials)
+		return s.commandRegistry.Execute(ctx, commandName, *credentials)
 
 	case "login":
 		credentials, err := s.inputHandler.GetLoginCredentials()
 		if err != nil {
 			return fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
-		return s.commandExecutor.Execute(ctx, commandName, *credentials)
+		return s.commandRegistry.Execute(ctx, commandName, *credentials)
 
 	case "upload", "update", "get", "delete":
 		// Пока просто выводим сообщение о том, что команда не реализована
@@ -100,6 +102,17 @@ func (s *Shell) executeCommand(commandName string) error {
 
 	default:
 		return fmt.Errorf("неизвестная команда: %s", commandName)
+	}
+}
+
+func (s *Shell) printSuccessMessage(commandName string) {
+	switch commandName {
+	case "register":
+		fmt.Println("✅ Регистрация успешна!")
+	case "login":
+		fmt.Println("✅ Вход выполнен успешно!")
+	default:
+		fmt.Printf("✅ %s выполнена успешно!\n", commandName)
 	}
 }
 
