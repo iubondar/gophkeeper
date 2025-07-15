@@ -16,14 +16,16 @@ const (
 // gzipWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
 // сжимать передаваемые данные и выставлять правильные HTTP-заголовки
 type gzipWriter struct {
-	w  http.ResponseWriter
-	zw *gzip.Writer
+	w           http.ResponseWriter
+	zw          *gzip.Writer
+	headersSent bool
 }
 
 func newGzipWriter(w http.ResponseWriter) *gzipWriter {
 	return &gzipWriter{
-		w:  w,
-		zw: gzip.NewWriter(w),
+		w:           w,
+		zw:          gzip.NewWriter(w),
+		headersSent: false,
 	}
 }
 
@@ -33,13 +35,17 @@ func (c *gzipWriter) Header() http.Header {
 }
 
 func (c *gzipWriter) Write(p []byte) (int, error) {
-	c.w.Header().Set(contentEncoding, "gzip")
+	if !c.headersSent {
+		c.w.Header().Set(contentEncoding, "gzip")
+		c.headersSent = true
+	}
 	return c.zw.Write(p)
 }
 
 func (c *gzipWriter) WriteHeader(statusCode int) {
-	if statusCode < 300 || statusCode == http.StatusConflict {
+	if !c.headersSent {
 		c.w.Header().Set(contentEncoding, "gzip")
+		c.headersSent = true
 	}
 	c.w.WriteHeader(statusCode)
 }
