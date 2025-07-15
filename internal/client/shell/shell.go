@@ -24,16 +24,14 @@ func NewShell(registry *cmd.CommandRegistry) *Shell {
 
 // Run запускает интерактивный интерфейс
 func (s *Shell) Run() error {
-	fmt.Println("=== GophKeeper CLI ===")
-	fmt.Println("Подключение к серверу...")
+	welcome()
 
 	// Проверяем доступность сервера
 	if err := s.checkServerHealth(); err != nil {
 		return fmt.Errorf("ошибка подключения к серверу: %w", err)
 	}
 
-	fmt.Println("✅ Успешно подключился к серверу!")
-	fmt.Println()
+	serverConnected()
 
 	// Основной цикл меню
 	for {
@@ -43,13 +41,13 @@ func (s *Shell) Run() error {
 		// Получаем команду по выбору пользователя
 		commandName, exists := s.menuManager.GetCommandByID(choice)
 		if !exists {
-			fmt.Println("Неверный выбор. Попробуйте снова.")
+			invalidChoice()
 			continue
 		}
 
 		// Проверяем команду выхода
 		if s.menuManager.IsExitCommand(commandName) {
-			fmt.Println("До свидания!")
+			goodbye()
 			return nil
 		}
 
@@ -57,17 +55,14 @@ func (s *Shell) Run() error {
 		if s.menuManager.IsLogoutCommand(commandName) {
 			s.menuManager.SwitchToState("main")
 			s.menuManager.ClearActionState()
-			fmt.Println("✅ Вы вышли из аккаунта")
-			fmt.Println()
+			logout()
 			continue
 		}
 
 		// Проверяем команду возврата
 		if s.menuManager.IsBackCommand(commandName) {
-			if s.menuManager.GoBack() {
-				fmt.Println()
-			} else {
-				fmt.Println("Нельзя вернуться назад")
+			if !s.menuManager.GoBack() {
+				backNotAllowed()
 			}
 			continue
 		}
@@ -76,7 +71,6 @@ func (s *Shell) Run() error {
 		if s.menuManager.IsActionCommand(commandName) {
 			s.menuManager.SetActionState(commandName, "")
 			s.menuManager.SwitchToState("data_type")
-			fmt.Println()
 			continue
 		}
 
@@ -86,30 +80,28 @@ func (s *Shell) Run() error {
 			if actionState != nil {
 				actionState.Type = commandName
 				if err := s.executeActionWithType(actionState.Action, actionState.Type); err != nil {
-					fmt.Printf("Ошибка: %v\n", err)
+					errorMsg(err)
 				} else {
 					s.printSuccessMessage(actionState.Action)
 				}
 				s.menuManager.ClearActionState()
 				s.menuManager.SwitchToState("authenticated")
 			}
-			fmt.Println()
 			continue
 		}
 
 		// Выполняем обычные команды
 		if err := s.executeCommand(commandName); err != nil {
-			fmt.Printf("Ошибка: %v\n", err)
+			errorMsg(err)
 		} else {
 			s.printSuccessMessage(commandName)
 
 			// Если это авторизация или регистрация, переключаем состояние
 			if (commandName == "register" || commandName == "login") && s.menuManager.GetCurrentState() == "main" {
-				fmt.Println("Переключение в меню пользователя...")
+				switchToUserMenuNotice()
 				s.menuManager.SwitchToState("authenticated")
 			}
 		}
-		fmt.Println()
 	}
 }
 
@@ -178,19 +170,19 @@ func (s *Shell) executeActionWithType(action, dataType string) error {
 func (s *Shell) printSuccessMessage(commandName string) {
 	switch commandName {
 	case "register":
-		fmt.Println("✅ Регистрация успешна!")
+		successRegistration()
 	case "login":
-		fmt.Println("✅ Вход выполнен успешно!")
+		successLogin()
 	case "upload":
-		fmt.Println("✅ Секрет успешно загружен!")
+		successUpload()
 	case "update":
-		fmt.Println("✅ Секрет успешно обновлен!")
+		successUpdate()
 	case "get":
-		fmt.Println("✅ Секрет успешно получен!")
+		successGet()
 	case "delete":
-		fmt.Println("✅ Секрет успешно удален!")
+		successDelete()
 	default:
-		fmt.Printf("✅ %s выполнена успешно!\n", commandName)
+		successGeneric(commandName)
 	}
 }
 

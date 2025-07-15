@@ -1,9 +1,5 @@
 package shell
 
-import (
-	"fmt"
-)
-
 // MenuItem представляет элемент меню
 type MenuItem struct {
 	ID          string
@@ -148,15 +144,15 @@ func NewMenuManager() *MenuManager {
 func (m *MenuManager) ShowMenu() {
 	state, exists := m.states[m.currentState]
 	if !exists {
-		fmt.Println("Ошибка: состояние меню не найдено")
+		menuError("Ошибка: состояние меню не найдено")
 		return
 	}
 
-	fmt.Printf("=== %s ===\n", state.Title)
+	menuTitle(state.Title)
 	for _, item := range state.Items {
-		fmt.Printf("%s. %s - %s\n", item.ID, item.Title, item.Description)
+		menuItem(item.ID, item.Title, item.Description)
 	}
-	fmt.Print("Выберите действие: ")
+	menuChoice()
 }
 
 // GetCommandByID возвращает команду по ID пункта меню
