@@ -26,6 +26,7 @@ type GophKeeperClient interface {
 	UpdateSecret(ctx context.Context, secret models.SecretData) error
 	GetSecret(ctx context.Context, secretName string) (*models.SecretData, error)
 	DeleteSecret(ctx context.Context, secretName string) error
+	HealthCheck(ctx context.Context) error
 }
 
 // CommandRegistry управляет реестром команд
@@ -45,6 +46,7 @@ func NewCommandRegistry(apiClient GophKeeperClient, crypto *crypto.Crypto) *Comm
 	registry.registerCommand(NewUpdateCommand(apiClient, crypto))
 	registry.registerCommand(NewGetCommand(apiClient, crypto))
 	registry.registerCommand(NewDeleteCommand(apiClient, crypto))
+	registry.registerCommand(NewHealthCommand(apiClient))
 
 	return &registry
 }

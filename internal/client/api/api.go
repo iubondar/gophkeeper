@@ -141,3 +141,20 @@ func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
 
 	return nil
 }
+
+// HealthCheck проверяет доступность сервера по /api/health
+func (c *APIClient) HealthCheck(ctx context.Context) error {
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		Get("/health")
+
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return nil
+}

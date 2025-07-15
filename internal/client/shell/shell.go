@@ -156,21 +156,7 @@ func (s *Shell) printSuccessMessage(commandName string) {
 
 // checkServerHealth проверяет доступность сервера
 func (s *Shell) checkServerHealth() error {
-	// client := &http.Client{
-	// 	Timeout: 5 * time.Second,
-	// }
-
-	// resp, err := client.Get(s.serverURL + "/health")
-	// if err != nil {
-	// 	return err
-	// }
-	// defer resp.Body.Close()
-
-	// if resp.StatusCode != http.StatusOK {
-	// 	return fmt.Errorf("сервер вернул статус %d", resp.StatusCode)
-	// }
-
-	return nil
+	return s.commandRegistry.Execute(context.Background(), "health", nil)
 }
 
 // Добавляем приватные методы-обработчики
