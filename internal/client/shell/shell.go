@@ -38,68 +38,36 @@ func (s *Shell) Run() error {
 		s.menuManager.ShowMenu()
 		choice := s.inputHandler.GetUserChoice()
 
-		// Получаем команду по выбору пользователя
 		commandName, exists := s.menuManager.GetCommandByID(choice)
 		if !exists {
 			invalidChoice()
 			continue
 		}
 
-		// Проверяем команду выхода
-		if s.menuManager.IsExitCommand(commandName) {
-			goodbye()
-			return nil
-		}
-
-		// Проверяем команду выхода из аккаунта
-		if s.menuManager.IsLogoutCommand(commandName) {
-			s.menuManager.SwitchToState(MenuStateMain)
-			s.menuManager.ClearActionState()
-			logout()
+		switch {
+		case s.menuManager.IsExitCommand(commandName):
+			return s.handleExitCommand()
+		case s.menuManager.IsLogoutCommand(commandName):
+			s.handleLogoutCommand()
 			continue
-		}
-
-		// Проверяем команду возврата
-		if s.menuManager.IsBackCommand(commandName) {
-			if !s.menuManager.GoBack() {
-				backNotAllowed()
-			}
+		case s.menuManager.IsBackCommand(commandName):
+			s.handleBackCommand()
 			continue
-		}
-
-		// Обрабатываем команды действий (upload, update, get, delete)
-		if s.menuManager.IsActionCommand(commandName) {
-			s.menuManager.SetActionState(commandName, "")
-			s.menuManager.SwitchToState(MenuStateDataType)
+		case s.menuManager.IsActionCommand(commandName):
+			s.handleActionCommand(commandName)
 			continue
-		}
-
-		// Обрабатываем команды выбора типа данных
-		if s.menuManager.IsDataTypeCommand(commandName) {
-			actionState := s.menuManager.GetActionState()
-			if actionState != nil {
-				actionState.Type = commandName
-				if err := s.executeActionWithType(actionState.Action, actionState.Type); err != nil {
-					errorMsg(err)
-				} else {
-					s.printSuccessMessage(actionState.Action)
+		case s.menuManager.IsDataTypeCommand(commandName):
+			s.handleDataTypeCommand(commandName)
+			continue
+		default:
+			if err := s.executeCommand(commandName); err != nil {
+				errorMsg(err)
+			} else {
+				s.printSuccessMessage(commandName)
+				if (commandName == CommandRegister || commandName == CommandLogin) && s.menuManager.GetCurrentState() == MenuStateMain {
+					switchToUserMenuNotice()
+					s.menuManager.SwitchToState(MenuStateAuthenticated)
 				}
-				s.menuManager.ClearActionState()
-				s.menuManager.SwitchToState(MenuStateAuthenticated)
-			}
-			continue
-		}
-
-		// Выполняем обычные команды
-		if err := s.executeCommand(commandName); err != nil {
-			errorMsg(err)
-		} else {
-			s.printSuccessMessage(commandName)
-
-			// Если это авторизация или регистрация, переключаем состояние
-			if (commandName == CommandRegister || commandName == CommandLogin) && s.menuManager.GetCurrentState() == MenuStateMain {
-				switchToUserMenuNotice()
-				s.menuManager.SwitchToState(MenuStateAuthenticated)
 			}
 		}
 	}
@@ -203,4 +171,41 @@ func (s *Shell) checkServerHealth() error {
 	// }
 
 	return nil
+}
+
+// Добавляем приватные методы-обработчики
+func (s *Shell) handleExitCommand() error {
+	goodbye()
+	return nil
+}
+
+func (s *Shell) handleLogoutCommand() {
+	s.menuManager.SwitchToState(MenuStateMain)
+	s.menuManager.ClearActionState()
+	logout()
+}
+
+func (s *Shell) handleBackCommand() {
+	if !s.menuManager.GoBack() {
+		backNotAllowed()
+	}
+}
+
+func (s *Shell) handleActionCommand(commandName string) {
+	s.menuManager.SetActionState(commandName, "")
+	s.menuManager.SwitchToState(MenuStateDataType)
+}
+
+func (s *Shell) handleDataTypeCommand(commandName string) {
+	actionState := s.menuManager.GetActionState()
+	if actionState != nil {
+		actionState.Type = commandName
+		if err := s.executeActionWithType(actionState.Action, actionState.Type); err != nil {
+			errorMsg(err)
+		} else {
+			s.printSuccessMessage(actionState.Action)
+		}
+		s.menuManager.ClearActionState()
+		s.menuManager.SwitchToState(MenuStateAuthenticated)
+	}
 }
