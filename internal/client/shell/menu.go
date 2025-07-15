@@ -32,107 +32,107 @@ type MenuManager struct {
 func NewMenuManager() *MenuManager {
 	manager := &MenuManager{
 		states:       make(map[string]MenuState),
-		currentState: "main",
+		currentState: MenuStateMain,
 		actionState:  nil,
 	}
 
 	// Главное меню
-	manager.states["main"] = MenuState{
+	manager.states[MenuStateMain] = MenuState{
 		Title: "Главное меню",
 		Items: []MenuItem{
 			{
 				ID:          "1",
 				Title:       "Регистрация",
 				Description: "Создать новый аккаунт",
-				Command:     "register",
+				Command:     CommandRegister,
 			},
 			{
 				ID:          "2",
 				Title:       "Вход",
 				Description: "Войти в существующий аккаунт",
-				Command:     "login",
+				Command:     CommandLogin,
 			},
 			{
 				ID:          "3",
 				Title:       "Выход",
 				Description: "Завершить работу",
-				Command:     "exit",
+				Command:     CommandExit,
 			},
 		},
 	}
 
 	// Меню авторизованного пользователя
-	manager.states["authenticated"] = MenuState{
+	manager.states[MenuStateAuthenticated] = MenuState{
 		Title:  "Меню пользователя",
-		Parent: "main",
+		Parent: MenuStateMain,
 		Items: []MenuItem{
 			{
 				ID:          "1",
 				Title:       "Загрузить",
 				Description: "Загрузить секрет",
-				Command:     "upload",
+				Command:     CommandUpload,
 			},
 			{
 				ID:          "2",
 				Title:       "Обновить",
 				Description: "Обновить секрет",
-				Command:     "update",
+				Command:     CommandUpdate,
 			},
 			{
 				ID:          "3",
 				Title:       "Получить",
 				Description: "Получить секрет",
-				Command:     "get",
+				Command:     CommandGet,
 			},
 			{
 				ID:          "4",
 				Title:       "Удалить",
 				Description: "Удалить секрет",
-				Command:     "delete",
+				Command:     CommandDelete,
 			},
 			{
 				ID:          "5",
 				Title:       "Выйти из аккаунта",
 				Description: "Выйти из аккаунта",
-				Command:     "logout",
+				Command:     CommandLogout,
 			},
 		},
 	}
 
 	// Меню выбора типа данных
-	manager.states["data_type"] = MenuState{
+	manager.states[MenuStateDataType] = MenuState{
 		Title:  "Выберите тип данных",
-		Parent: "authenticated",
+		Parent: MenuStateAuthenticated,
 		Items: []MenuItem{
 			{
 				ID:          "1",
 				Title:       "Текст",
 				Description: "Простой текстовый секрет",
-				Command:     "text",
+				Command:     CommandText,
 			},
 			{
 				ID:          "2",
 				Title:       "Логин-Пароль",
 				Description: "Данные для входа в систему",
-				Command:     "login_password",
+				Command:     CommandLoginPassword,
 			},
 			{
 				ID:          "3",
 				Title:       "Данные карты",
 				Description: "Информация о банковской карте",
-				Command:     "card",
+				Command:     CommandCard,
 			},
 			{
 				ID:          "4",
 				Title:       "Файл",
 				Description: "Зашифрованный файл",
-				Command:     "file",
+				Command:     CommandFile,
 			},
 			{
 				ID:          "5",
 				Title:       "Назад",
 				Description: "Вернуться к предыдущему меню",
-				Command:     "back",
+				Command:     CommandBack,
 			},
 		},
 	}
@@ -172,17 +172,17 @@ func (m *MenuManager) GetCommandByID(id string) (string, bool) {
 
 // IsExitCommand проверяет, является ли команда командой выхода
 func (m *MenuManager) IsExitCommand(command string) bool {
-	return command == "exit"
+	return command == CommandExit
 }
 
 // IsBackCommand проверяет, является ли команда командой возврата
 func (m *MenuManager) IsBackCommand(command string) bool {
-	return command == "back"
+	return command == CommandBack
 }
 
 // IsLogoutCommand проверяет, является ли команда командой выхода из аккаунта
 func (m *MenuManager) IsLogoutCommand(command string) bool {
-	return command == "logout"
+	return command == CommandLogout
 }
 
 // SwitchToState переключает на другое состояние меню
@@ -229,10 +229,10 @@ func (m *MenuManager) ClearActionState() {
 
 // IsActionCommand проверяет, является ли команда командой действия (upload, update, get, delete)
 func (m *MenuManager) IsActionCommand(command string) bool {
-	return command == "upload" || command == "update" || command == "get" || command == "delete"
+	return command == CommandUpload || command == CommandUpdate || command == CommandGet || command == CommandDelete
 }
 
 // IsDataTypeCommand проверяет, является ли команда командой выбора типа данных
 func (m *MenuManager) IsDataTypeCommand(command string) bool {
-	return command == "text" || command == "login_password" || command == "card" || command == "file"
+	return command == CommandText || command == CommandLoginPassword || command == CommandCard || command == CommandFile
 }

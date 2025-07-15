@@ -53,7 +53,7 @@ func (s *Shell) Run() error {
 
 		// Проверяем команду выхода из аккаунта
 		if s.menuManager.IsLogoutCommand(commandName) {
-			s.menuManager.SwitchToState("main")
+			s.menuManager.SwitchToState(MenuStateMain)
 			s.menuManager.ClearActionState()
 			logout()
 			continue
@@ -70,7 +70,7 @@ func (s *Shell) Run() error {
 		// Обрабатываем команды действий (upload, update, get, delete)
 		if s.menuManager.IsActionCommand(commandName) {
 			s.menuManager.SetActionState(commandName, "")
-			s.menuManager.SwitchToState("data_type")
+			s.menuManager.SwitchToState(MenuStateDataType)
 			continue
 		}
 
@@ -85,7 +85,7 @@ func (s *Shell) Run() error {
 					s.printSuccessMessage(actionState.Action)
 				}
 				s.menuManager.ClearActionState()
-				s.menuManager.SwitchToState("authenticated")
+				s.menuManager.SwitchToState(MenuStateAuthenticated)
 			}
 			continue
 		}
@@ -97,9 +97,9 @@ func (s *Shell) Run() error {
 			s.printSuccessMessage(commandName)
 
 			// Если это авторизация или регистрация, переключаем состояние
-			if (commandName == "register" || commandName == "login") && s.menuManager.GetCurrentState() == "main" {
+			if (commandName == CommandRegister || commandName == CommandLogin) && s.menuManager.GetCurrentState() == MenuStateMain {
 				switchToUserMenuNotice()
-				s.menuManager.SwitchToState("authenticated")
+				s.menuManager.SwitchToState(MenuStateAuthenticated)
 			}
 		}
 	}
@@ -110,14 +110,14 @@ func (s *Shell) executeCommand(commandName string) error {
 	ctx := context.Background()
 
 	switch commandName {
-	case "register":
+	case CommandRegister:
 		credentials, err := s.inputHandler.GetUserCredentials()
 		if err != nil {
 			return fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
 		return s.commandRegistry.Execute(ctx, commandName, *credentials)
 
-	case "login":
+	case CommandLogin:
 		credentials, err := s.inputHandler.GetLoginCredentials()
 		if err != nil {
 			return fmt.Errorf("ошибка получения данных пользователя: %w", err)
@@ -138,13 +138,13 @@ func (s *Shell) executeActionWithType(action, dataType string) error {
 	var err error
 
 	switch dataType {
-	case "text":
+	case CommandText:
 		data, err = s.inputHandler.GetTextData()
-	case "login_password":
+	case CommandLoginPassword:
 		data, err = s.inputHandler.GetLoginPasswordData()
-	case "card":
+	case CommandCard:
 		data, err = s.inputHandler.GetCardData()
-	case "file":
+	case CommandFile:
 		data, err = s.inputHandler.GetFileData()
 	default:
 		return fmt.Errorf("неизвестный тип данных: %s", dataType)
@@ -155,7 +155,7 @@ func (s *Shell) executeActionWithType(action, dataType string) error {
 	}
 
 	// Для операций get и delete нужен только название секрета
-	if action == "get" || action == "delete" {
+	if action == CommandGet || action == CommandDelete {
 		secretName, err := s.inputHandler.GetSecretName()
 		if err != nil {
 			return fmt.Errorf("ошибка получения названия секрета: %w", err)
@@ -169,17 +169,17 @@ func (s *Shell) executeActionWithType(action, dataType string) error {
 
 func (s *Shell) printSuccessMessage(commandName string) {
 	switch commandName {
-	case "register":
+	case CommandRegister:
 		successRegistration()
-	case "login":
+	case CommandLogin:
 		successLogin()
-	case "upload":
+	case CommandUpload:
 		successUpload()
-	case "update":
+	case CommandUpdate:
 		successUpdate()
-	case "get":
+	case CommandGet:
 		successGet()
-	case "delete":
+	case CommandDelete:
 		successDelete()
 	default:
 		successGeneric(commandName)
