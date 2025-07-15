@@ -44,15 +44,14 @@ func (h *InputHandler) GetUserCredentials() (*models.UserCredentials, error) {
 	}
 	password = strings.TrimSpace(password)
 
+	credentials := &models.UserCredentials{Login: login, Password: password}
+
 	// Валидация входных данных
-	if login == "" {
-		return nil, fmt.Errorf("логин не может быть пустым")
-	}
-	if password == "" {
-		return nil, fmt.Errorf("пароль не может быть пустым")
+	if ok, err := models.ValidateUserCredentials(credentials); !ok {
+		return nil, err
 	}
 
-	return &models.UserCredentials{Login: login, Password: password}, nil
+	return credentials, nil
 }
 
 // GetLoginCredentials получает данные для входа
@@ -76,17 +75,17 @@ func (h *InputHandler) GetTextData() (*models.TextSecretData, error) {
 	}
 	text = strings.TrimSpace(text)
 
-	if name == "" {
-		return nil, fmt.Errorf("название секрета не может быть пустым")
-	}
-	if text == "" {
-		return nil, fmt.Errorf("текст секрета не может быть пустым")
-	}
-
-	return &models.TextSecretData{
+	data := &models.TextSecretData{
 		Name: name,
 		Text: text,
-	}, nil
+	}
+
+	// Валидация входных данных
+	if ok, err := models.ValidateTextSecretData(data); !ok {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 // GetLoginPasswordData получает данные логина и пароля
@@ -119,22 +118,19 @@ func (h *InputHandler) GetLoginPasswordData() (*models.LoginPasswordData, error)
 	}
 	url = strings.TrimSpace(url)
 
-	if name == "" {
-		return nil, fmt.Errorf("название секрета не может быть пустым")
-	}
-	if login == "" {
-		return nil, fmt.Errorf("логин не может быть пустым")
-	}
-	if password == "" {
-		return nil, fmt.Errorf("пароль не может быть пустым")
-	}
-
-	return &models.LoginPasswordData{
+	data := &models.LoginPasswordData{
 		Name:     name,
 		Login:    login,
 		Password: password,
 		URL:      url,
-	}, nil
+	}
+
+	// Валидация входных данных
+	if ok, err := models.ValidateLoginPasswordData(data); !ok {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 // GetCardData получает данные банковской карты
@@ -174,29 +170,20 @@ func (h *InputHandler) GetCardData() (*models.CardData, error) {
 	}
 	cvv = strings.TrimSpace(cvv)
 
-	if name == "" {
-		return nil, fmt.Errorf("название секрета не может быть пустым")
-	}
-	if number == "" {
-		return nil, fmt.Errorf("номер карты не может быть пустым")
-	}
-	if holder == "" {
-		return nil, fmt.Errorf("имя владельца не может быть пустым")
-	}
-	if expiry == "" {
-		return nil, fmt.Errorf("срок действия не может быть пустым")
-	}
-	if cvv == "" {
-		return nil, fmt.Errorf("CVV не может быть пустым")
-	}
-
-	return &models.CardData{
+	data := &models.CardData{
 		Name:   name,
 		Number: number,
 		Holder: holder,
 		Expiry: expiry,
 		CVV:    cvv,
-	}, nil
+	}
+
+	// Валидация входных данных
+	if ok, err := models.ValidateCardData(data); !ok {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 // GetFileData получает данные файла
@@ -215,17 +202,17 @@ func (h *InputHandler) GetFileData() (*models.FileData, error) {
 	}
 	filePath = strings.TrimSpace(filePath)
 
-	if name == "" {
-		return nil, fmt.Errorf("название секрета не может быть пустым")
-	}
-	if filePath == "" {
-		return nil, fmt.Errorf("путь к файлу не может быть пустым")
-	}
-
-	return &models.FileData{
+	data := &models.FileData{
 		Name:     name,
 		FilePath: filePath,
-	}, nil
+	}
+
+	// Валидация входных данных
+	if ok, err := models.ValidateFileData(data); !ok {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 // GetSecretName получает название секрета для операций get и delete
@@ -237,8 +224,9 @@ func (h *InputHandler) GetSecretName() (string, error) {
 	}
 	name = strings.TrimSpace(name)
 
-	if name == "" {
-		return "", fmt.Errorf("название секрета не может быть пустым")
+	// Валидация входных данных
+	if ok, err := models.ValidateSecretName(name); !ok {
+		return "", err
 	}
 
 	return name, nil
