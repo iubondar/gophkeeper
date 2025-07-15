@@ -24,7 +24,7 @@ func NewRegisterHandler(uc usecase.RegisterUsecase) *RegisterHandler {
 
 func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
-		http.Error(res, "Only POST requests are allowed!", http.StatusMethodNotAllowed)
+		models.EncodeError(res, "Only POST requests are allowed!", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -33,13 +33,13 @@ func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Reque
 	// читаем тело запроса
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		models.EncodeError(res, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// десериализуем JSON
 	if err = json.Unmarshal(buf.Bytes(), &in); err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		models.EncodeError(res, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -47,18 +47,18 @@ func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Reque
 	if err != nil {
 		if errors.Is(err, models.ErrLoginOrPasswordEmpty) {
 			zap.L().Sugar().Debugln("Login or password is empty", zap.Error(err))
-			http.Error(res, models.ErrLoginOrPasswordEmpty.Error(), http.StatusBadRequest)
+			models.EncodeError(res, models.ErrLoginOrPasswordEmpty.Error(), http.StatusBadRequest)
 			return
 		}
 
 		if errors.Is(err, models.ErrUserAlreadyExists) {
 			zap.L().Sugar().Debugln("User already exists", zap.Error(err))
-			http.Error(res, models.ErrUserAlreadyExists.Error(), http.StatusConflict)
+			models.EncodeError(res, models.ErrUserAlreadyExists.Error(), http.StatusConflict)
 			return
 		}
 
 		zap.L().Sugar().Debugln("Failed to register user", zap.Error(err))
-		http.Error(res, "Failed to register user", http.StatusInternalServerError)
+		models.EncodeError(res, "Failed to register user", http.StatusInternalServerError)
 		return
 	}
 
@@ -66,7 +66,7 @@ func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Reque
 
 	if err = json.NewEncoder(res).Encode(result); err != nil {
 		zap.L().Sugar().Debugln("Failed to encode response", zap.Error(err))
-		http.Error(res, "Failed to encode response", http.StatusInternalServerError)
+		models.EncodeError(res, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
 

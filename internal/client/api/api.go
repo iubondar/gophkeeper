@@ -39,6 +39,20 @@ func (c *APIClient) handleAuthenticateResponse(responseBody []byte) error {
 	return nil
 }
 
+// handleErrorResponse обрабатывает ошибки HTTP ответа и разбирает JSONError
+func (c *APIClient) handleErrorResponse(response *resty.Response) error {
+	if response.StatusCode() >= 400 {
+		// Пытаемся разобрать JSONError
+		jsonErr, err := models.ParseJSONError(response.RawResponse)
+		if err == nil {
+			return errors.New(jsonErr.Message)
+		}
+		// Если не удалось разобрать JSONError, возвращаем обычную ошибку
+		return errors.New(response.String())
+	}
+	return nil
+}
+
 func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
 	response, err := c.httpc.R().
 		SetContext(ctx).
@@ -49,8 +63,8 @@ func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
 		return err
 	}
 
-	if response.IsError() {
-		return errors.New(response.String())
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
 	}
 
 	return c.handleAuthenticateResponse(response.Body())
@@ -67,12 +81,11 @@ func (c *APIClient) Login(ctx context.Context, in models.LoginIn) (salt string, 
 		return "", err
 	}
 
-	if response.IsError() {
-		return "", errors.New(response.String())
+	if err := c.handleErrorResponse(response); err != nil {
+		return "", err
 	}
 
 	var out models.LoginOut
-	fmt.Println(response.String())
 	err = json.Unmarshal(response.Body(), &out)
 	if err != nil {
 		return "", fmt.Errorf("failed to unmarshal login response: %w", err)
@@ -91,8 +104,8 @@ func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) 
 		return err
 	}
 
-	if response.IsError() {
-		return errors.New(response.String())
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
 	}
 
 	return c.handleAuthenticateResponse(response.Body())

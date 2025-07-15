@@ -58,13 +58,13 @@ func TestAuthenticateHandler_Authenticate(t *testing.T) {
 			body:           mustMarshal(t, models.AuthenticateIn{Login: "testuser", PasswordHash: "validhash"}),
 			ucError:        assert.AnError,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Failed to authenticate user\n",
+			expectedBody:   `{"message":"Failed to authenticate user","code":500}` + "\n",
 		},
 		{
 			name:           "Wrong HTTP method",
 			method:         http.MethodGet,
 			expectedStatus: http.StatusMethodNotAllowed,
-			expectedBody:   "Only POST requests are allowed!\n",
+			expectedBody:   `{"message":"Only POST requests are allowed!","code":405}` + "\n",
 		},
 		{
 			name:           "Invalid JSON",

@@ -23,7 +23,7 @@ func NewLoginHandler(uc usecase.LoginUsecase) *LoginHandler {
 
 func (handler LoginHandler) Login(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
-		http.Error(res, "Only POST requests are allowed!", http.StatusMethodNotAllowed)
+		models.EncodeError(res, "Only POST requests are allowed!", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -32,26 +32,26 @@ func (handler LoginHandler) Login(res http.ResponseWriter, req *http.Request) {
 	// читаем тело запроса
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		models.EncodeError(res, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// десериализуем JSON
 	if err = json.Unmarshal(buf.Bytes(), &in); err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		models.EncodeError(res, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	salt, err := handler.uc.GetSalt(req.Context(), in.Login)
 	if err != nil {
 		zap.L().Sugar().Debugln("Failed to get user salt", zap.Error(err))
-		http.Error(res, "Failed to get user salt", http.StatusInternalServerError)
+		models.EncodeError(res, "Failed to get user salt", http.StatusInternalServerError)
 		return
 	}
 
 	// Если соль пустая, значит пользователь не найден
 	if salt == "" {
-		res.WriteHeader(http.StatusNotFound)
+		models.EncodeError(res, models.ErrUserNotFound.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -60,7 +60,7 @@ func (handler LoginHandler) Login(res http.ResponseWriter, req *http.Request) {
 
 	if err = json.NewEncoder(res).Encode(response); err != nil {
 		zap.L().Sugar().Debugln("Failed to encode response", zap.Error(err))
-		http.Error(res, "Failed to encode response", http.StatusInternalServerError)
+		models.EncodeError(res, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
 	res.WriteHeader(http.StatusOK)

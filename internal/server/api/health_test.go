@@ -1,12 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
 
 	"github.com/stretchr/testify/assert"
@@ -51,6 +53,7 @@ func TestHealthHandler_Health(t *testing.T) {
 		method   string
 		setErr   error
 		wantCode int
+		wantBody *models.JSONError // ожидаемое тело для ошибок
 	}{
 		{
 			name:     "Positive test",
@@ -63,24 +66,28 @@ func TestHealthHandler_Health(t *testing.T) {
 			method:   http.MethodPost,
 			setErr:   nil,
 			wantCode: http.StatusMethodNotAllowed,
+			wantBody: &models.JSONError{Message: "Only GET requests are allowed!", Code: http.StatusMethodNotAllowed},
 		},
 		{
 			name:     "Test PUT method not allowed",
 			method:   http.MethodPut,
 			setErr:   nil,
 			wantCode: http.StatusMethodNotAllowed,
+			wantBody: &models.JSONError{Message: "Only GET requests are allowed!", Code: http.StatusMethodNotAllowed},
 		},
 		{
 			name:     "Test DELETE method not allowed",
 			method:   http.MethodDelete,
 			setErr:   nil,
 			wantCode: http.StatusMethodNotAllowed,
+			wantBody: &models.JSONError{Message: "Only GET requests are allowed!", Code: http.StatusMethodNotAllowed},
 		},
 		{
 			name:     "Check error test",
 			method:   http.MethodGet,
 			setErr:   errors.New("Status is not ok"),
 			wantCode: http.StatusInternalServerError,
+			wantBody: &models.JSONError{Message: "Status is not ok", Code: http.StatusInternalServerError},
 		},
 	}
 
@@ -108,6 +115,13 @@ func TestHealthHandler_Health(t *testing.T) {
 			}()
 
 			assert.Equal(t, tt.wantCode, res.StatusCode)
+
+			if tt.wantBody != nil {
+				var got models.JSONError
+				err := json.NewDecoder(res.Body).Decode(&got)
+				assert.NoError(t, err)
+				assert.Equal(t, *tt.wantBody, got)
+			}
 		})
 	}
 }

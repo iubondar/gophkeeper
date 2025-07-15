@@ -48,13 +48,13 @@ func TestLoginHandler_Login(t *testing.T) {
 			body:           mustMarshal(t, models.LoginIn{Login: "testuser"}),
 			ucError:        assert.AnError,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Failed to get user salt\n",
+			expectedBody:   `{"message":"Failed to get user salt","code":500}` + "\n",
 		},
 		{
 			name:           "Wrong HTTP method",
 			method:         http.MethodGet,
 			expectedStatus: http.StatusMethodNotAllowed,
-			expectedBody:   "Only POST requests are allowed!\n",
+			expectedBody:   `{"message":"Only POST requests are allowed!","code":405}` + "\n",
 		},
 		{
 			name:           "Invalid JSON",

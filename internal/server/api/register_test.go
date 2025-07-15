@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -58,13 +57,13 @@ func TestRegisterHandler_Register(t *testing.T) {
 			body:           mustMarshal(t, models.RegisterIn{Login: "testuser", PasswordHash: "testpass", Salt: "testsalt"}),
 			ucError:        assert.AnError,
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "Failed to register user\n",
+			expectedBody:   `{"message":"Failed to register user","code":500}` + "\n",
 		},
 		{
 			name:           "Wrong HTTP method",
 			method:         http.MethodGet,
 			expectedStatus: http.StatusMethodNotAllowed,
-			expectedBody:   "Only POST requests are allowed!\n",
+			expectedBody:   `{"message":"Only POST requests are allowed!","code":405}` + "\n",
 		},
 		{
 			name:           "Invalid JSON",
@@ -118,11 +117,4 @@ func TestRegisterHandler_Register(t *testing.T) {
 			}
 		})
 	}
-}
-
-func mustMarshal(t *testing.T, v any) []byte {
-	t.Helper()
-	data, err := json.Marshal(v)
-	assert.NoError(t, err)
-	return data
 }

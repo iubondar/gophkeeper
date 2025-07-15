@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"net/http"
+
+	"gophkeeper/internal/models"
 )
 
 // StatusChecker определяет интерфейс для проверки состояния хранилища.
@@ -32,13 +34,13 @@ func NewHealthHandler(checker StatusChecker) HealthHandler {
 // Возвращает статус 200 OK в случае успеха или 500 Internal Server Error при ошибке.
 func (handler HealthHandler) Health(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
-		http.Error(res, "Only GET requests are allowed!", http.StatusMethodNotAllowed)
+		models.EncodeError(res, "Only GET requests are allowed!", http.StatusMethodNotAllowed)
 		return
 	}
 
 	err := handler.checker.CheckStatus(req.Context())
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
+		models.EncodeError(res, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
