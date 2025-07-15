@@ -8,7 +8,13 @@ import (
 	"gophkeeper/internal/config"
 	"log"
 	"os"
+
+	"go.uber.org/zap"
 )
+
+func init() {
+	zap.ReplaceGlobals(zap.Must(zap.NewDevelopment()))
+}
 
 func main() {
 	config, err := config.NewConfig(os.Args[0], os.Args[1:])

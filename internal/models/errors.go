@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 )
 
@@ -43,17 +42,11 @@ func EncodeError(res http.ResponseWriter, message string, code int) {
 	jsonErr.Encode(res)
 }
 
-// ParseJSONError разбирает JSONError из HTTP ответа
-func ParseJSONError(resp *http.Response) (*JSONError, error) {
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
+// ParseJSONError разбирает JSONError из тела ответа ([]byte)
+func ParseJSONError(body []byte) (*JSONError, error) {
 	var jsonErr JSONError
 	if err := json.Unmarshal(body, &jsonErr); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON error: %w", err)
 	}
-
 	return &jsonErr, nil
 }

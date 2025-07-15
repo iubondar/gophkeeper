@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-resty/resty/v2"
+	"go.uber.org/zap"
 )
 
 type APIClient struct {
@@ -43,9 +44,11 @@ func (c *APIClient) handleAuthenticateResponse(responseBody []byte) error {
 func (c *APIClient) handleErrorResponse(response *resty.Response) error {
 	if response.StatusCode() >= 400 {
 		// Пытаемся разобрать JSONError
-		jsonErr, err := models.ParseJSONError(response.RawResponse)
+		jsonErr, err := models.ParseJSONError(response.Body())
 		if err == nil {
 			return errors.New(jsonErr.Message)
+		} else {
+			zap.L().Sugar().Debugln("Failed to parse JSON error", zap.Error(err))
 		}
 		// Если не удалось разобрать JSONError, возвращаем обычную ошибку
 		return errors.New(response.String())
