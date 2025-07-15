@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"gophkeeper/internal/server/storage/mocks"
@@ -42,9 +43,10 @@ func TestLoginUsecase_GetSalt(t *testing.T) {
 			expectedError: assert.AnError,
 		},
 		{
-			name:         "Empty login",
-			login:        "",
-			expectedSalt: "",
+			name:          "Empty login",
+			login:         "",
+			expectedSalt:  "",
+			expectedError: fmt.Errorf("пустой логин"),
 		},
 	}
 

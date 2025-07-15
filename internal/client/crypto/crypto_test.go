@@ -8,7 +8,7 @@ import (
 
 func TestGeneratePasswordHash_Deterministic(t *testing.T) {
 	crypto := NewCrypto()
-	crypto.SetSalt("test-salt")
+	crypto.SetSalt("dGVzdC1zYWx0") // base64 encoded "test-salt"
 
 	password := "test-password"
 
@@ -28,7 +28,7 @@ func TestGeneratePasswordHash_Deterministic(t *testing.T) {
 
 func TestVerifyPasswordHash(t *testing.T) {
 	crypto := NewCrypto()
-	crypto.SetSalt("test-salt")
+	crypto.SetSalt("dGVzdC1zYWx0") // base64 encoded "test-salt"
 
 	password := "test-password"
 
@@ -37,12 +37,12 @@ func TestVerifyPasswordHash(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Проверяем правильный пароль
-	valid, err := crypto.VerifyPasswordHash(password, "test-salt", hash)
+	valid, err := crypto.VerifyPasswordHash(password, "dGVzdC1zYWx0", hash)
 	assert.NoError(t, err)
 	assert.True(t, valid, "Правильный пароль должен быть валидным")
 
 	// Проверяем неправильный пароль
-	valid, err = crypto.VerifyPasswordHash("wrong-password", "test-salt", hash)
+	valid, err = crypto.VerifyPasswordHash("wrong-password", "dGVzdC1zYWx0", hash)
 	assert.NoError(t, err)
 	assert.False(t, valid, "Неправильный пароль должен быть невалидным")
 }

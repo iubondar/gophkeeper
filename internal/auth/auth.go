@@ -14,13 +14,6 @@ const secretKey = "supersecretkey"
 const AuthCookieName = "Authorization"
 const UserIDKey = "userID"
 
-// claims — структура утверждений, которая включает стандартные утверждения и
-// одно пользовательское UserID
-type claims struct {
-	jwt.RegisteredClaims
-	UserID uuid.UUID
-}
-
 func GenerateAccessToken(userID string) (string, error) {
 	return generateToken(userID, 15*time.Minute)
 }
@@ -57,7 +50,7 @@ func GetUserIDFromReq(req *http.Request) (userID uuid.UUID, err error) {
 }
 
 func getUserID(tokenString string) (userID uuid.UUID, err error) {
-	claims := &claims{}
+	claims := &jwt.RegisteredClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims,
 		func(t *jwt.Token) (any, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -73,5 +66,11 @@ func getUserID(tokenString string) (userID uuid.UUID, err error) {
 		return uuid.Nil, fmt.Errorf("token is not valid")
 	}
 
-	return claims.UserID, nil
+	// Parse UUID from Subject claim
+	userID, err = uuid.Parse(claims.Subject)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid user ID in token: %v", err)
+	}
+
+	return userID, nil
 }
