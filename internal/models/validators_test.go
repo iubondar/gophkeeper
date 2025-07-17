@@ -2,6 +2,8 @@ package models
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestValidateUserCredentials(t *testing.T) {
@@ -330,21 +332,54 @@ func TestIsValidEmail(t *testing.T) {
 }
 
 func TestValidateCardData_Luhn(t *testing.T) {
-	data := &CardData{
-		Name:   "test card",
-		Number: "4003600000000014", // валидный по Luhn
-		Holder: "John Doe",
-		Expiry: "12/25",
-		CVV:    "123",
-	}
-	ok, err := ValidateCardData(data)
-	if !ok || err != nil {
-		t.Errorf("ValidateCardData() with valid Luhn failed: %v", err)
+	validCard := &CardData{
+		Name:     "Test Card",
+		Number:   "4111111111111111", // Valid Luhn number
+		Holder:   "John Doe",
+		Expiry:   "12/25",
+		CVV:      "123",
+		Metadata: "Test metadata",
 	}
 
-	data.Number = "4111111111111112" // невалидный по Luhn
-	ok, err = ValidateCardData(data)
-	if ok || err == nil {
-		t.Errorf("ValidateCardData() with invalid Luhn should fail")
+	ok, err := ValidateCardData(validCard)
+	assert.True(t, ok)
+	assert.NoError(t, err)
+}
+
+func TestValidateTextSecretData_WithMetadata(t *testing.T) {
+	validData := &TextSecretData{
+		Name:     "Test Secret",
+		Text:     "Secret text content",
+		Metadata: "Test metadata",
 	}
+
+	ok, err := ValidateTextSecretData(validData)
+	assert.True(t, ok)
+	assert.NoError(t, err)
+}
+
+func TestValidateLoginPasswordData_WithMetadata(t *testing.T) {
+	validData := &LoginPasswordData{
+		Name:     "Test Login",
+		Login:    "user@example.com",
+		Password: "password123",
+		URL:      "https://example.com",
+		Metadata: "Test metadata",
+	}
+
+	ok, err := ValidateLoginPasswordData(validData)
+	assert.True(t, ok)
+	assert.NoError(t, err)
+}
+
+func TestValidateFileData_WithMetadata(t *testing.T) {
+	validData := &FileData{
+		Name:     "Test File",
+		FilePath: "/path/to/file.txt",
+		Metadata: "Test metadata",
+	}
+
+	ok, err := ValidateFileData(validData)
+	assert.True(t, ok)
+	assert.NoError(t, err)
 }

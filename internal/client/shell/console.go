@@ -47,6 +47,10 @@ func promptURL() {
 	fmt.Print("Введите URL (опционально): ")
 }
 
+func promptMetadata() {
+	fmt.Print("Введите метаданные (опционально): ")
+}
+
 func menuError(msg string) {
 	fmt.Println(msg)
 }
@@ -128,6 +132,7 @@ func readLine() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	input = strings.TrimSpace(input)
 	input = strings.TrimSuffix(input, "\n")
 	input = strings.TrimSuffix(input, "\r")
 	return input, nil

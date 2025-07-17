@@ -29,30 +29,34 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) error {
 	switch data := args.(type) {
 	case *models.TextSecretData:
 		secretData = models.SecretData{
-			Name: data.Name,
-			Type: "text",
-			Data: data.Text,
+			Name:     data.Name,
+			Type:     "text",
+			Data:     data.Text,
+			Metadata: data.Metadata,
 		}
 
 	case *models.LoginPasswordData:
 		secretData = models.SecretData{
-			Name: data.Name,
-			Type: "login_password",
-			Data: fmt.Sprintf("login:%s;password:%s;url:%s", data.Login, data.Password, data.URL),
+			Name:     data.Name,
+			Type:     "login_password",
+			Data:     fmt.Sprintf("login:%s;password:%s;url:%s", data.Login, data.Password, data.URL),
+			Metadata: data.Metadata,
 		}
 
 	case *models.CardData:
 		secretData = models.SecretData{
-			Name: data.Name,
-			Type: "card",
-			Data: fmt.Sprintf("number:%s;holder:%s;expiry:%s;cvv:%s", data.Number, data.Holder, data.Expiry, data.CVV),
+			Name:     data.Name,
+			Type:     "card",
+			Data:     fmt.Sprintf("number:%s;holder:%s;expiry:%s;cvv:%s", data.Number, data.Holder, data.Expiry, data.CVV),
+			Metadata: data.Metadata,
 		}
 
 	case *models.FileData:
 		secretData = models.SecretData{
-			Name: data.Name,
-			Type: "file",
-			Data: data.FilePath,
+			Name:     data.Name,
+			Type:     "file",
+			Data:     data.FilePath,
+			Metadata: data.Metadata,
 		}
 
 	default:
