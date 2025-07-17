@@ -25,49 +25,54 @@ type AuthenticateOut struct {
 }
 
 type AuthenticateResult struct {
-	AccessToken  string
-	RefreshToken string
-	ExpiresIn    int
-	Success      bool
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	Success      bool   `json:"success"`
 }
 
 type UserCredentials struct {
-	Login    string
-	Password string
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 // SecretData представляет данные секрета
 type SecretData struct {
-	Name string
-	Type string
-	Data string
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Data     string `json:"data"`
+	Metadata string `json:"metadata"`
 }
 
 // TextSecretData представляет данные текстового секрета
 type TextSecretData struct {
-	Name string
-	Text string
+	Name     string `json:"name"`
+	Text     string `json:"text"`
+	Metadata string `json:"metadata"`
 }
 
 // LoginPasswordData представляет данные логина и пароля
 type LoginPasswordData struct {
-	Name     string
-	Login    string
-	Password string
-	URL      string
+	Name     string `json:"name"`
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	URL      string `json:"url"`
+	Metadata string `json:"metadata"`
 }
 
 // CardData представляет данные банковской карты
 type CardData struct {
-	Name   string
-	Number string
-	Holder string
-	Expiry string
-	CVV    string
+	Name     string `json:"name"`
+	Number   string `json:"number"`
+	Holder   string `json:"holder"`
+	Expiry   string `json:"expiry"`
+	CVV      string `json:"cvv"`
+	Metadata string `json:"metadata"`
 }
 
 // FileData представляет данные файла
 type FileData struct {
-	Name     string
-	FilePath string
+	Name     string `json:"name"`
+	FilePath string `json:"file_path"`
+	Metadata string `json:"metadata"`
 }
