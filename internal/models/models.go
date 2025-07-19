@@ -1,5 +1,9 @@
 package models
 
+import (
+	"errors"
+)
+
 type RegisterIn struct {
 	Login        string `json:"login"`
 	PasswordHash string `json:"password_hash"`
@@ -76,3 +80,22 @@ type FileData struct {
 	FilePath string `json:"file_path"`
 	Metadata string `json:"metadata"`
 }
+
+// UploadSecretIn представляет входные данные для загрузки секрета
+// user_id должен быть получен из авторизации (например, из токена)
+type UploadSecretIn struct {
+	UserID        string `json:"user_id"` // или uuid.UUID, если нужно
+	Label         string `json:"label"`
+	Type          string `json:"type"`
+	Metadata      string `json:"metadata"`
+	EncryptedData string `json:"encrypted_data"`
+	FileKey       string `json:"file_key"`
+	Version       int    `json:"version"`
+}
+
+type UploadSecretOut struct {
+	ID      string `json:"id"`
+	Version int    `json:"version"`
+}
+
+var ErrConflict = errors.New("conflict: resource already exists")

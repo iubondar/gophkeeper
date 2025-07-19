@@ -6,7 +6,11 @@ import (
 	"gophkeeper/internal/server/storage/testhelpers"
 	"log"
 	"testing"
+	"time"
 
+	"gophkeeper/internal/models"
+
+	"github.com/google/uuid"
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -80,4 +84,35 @@ func (s *StorageTestSuite) TestRegister() {
 	// 	assert.NoError(s.T(), err)
 	// 	assert.False(s.T(), ok)
 	// })
+}
+
+func (s *StorageTestSuite) TestInsertRecord() {
+	ctx := context.Background()
+	userID := uuid.New()
+	id := uuid.New()
+	label := "test-label"
+	recordType := "note"
+	metadata := "meta"
+	encryptedData := []byte("data")
+	fileKey := "key"
+	version := 1
+	createdAt := time.Now()
+	updatedAt := time.Now()
+
+	// Добавляем пользователя, чтобы не было ошибки foreign key
+	login := "testuser"
+	passwordHash := "hash"
+	salt := "salt"
+	_, err := s.storage.Register(ctx, userID, login, passwordHash, salt)
+	s.Require().NoError(err)
+
+	// Тест успешной вставки
+	err = s.storage.InsertRecord(ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+	s.Require().NoError(err)
+
+	// Тест конфликта - попытка вставить запись с тем же label
+	id2 := uuid.New()
+	err = s.storage.InsertRecord(ctx, id2, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+	s.Require().Error(err)
+	s.Require().Equal(models.ErrConflict, err)
 }

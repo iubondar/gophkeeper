@@ -13,4 +13,9 @@ const (
 	GetUserByLoginAndPassword = `
 		SELECT id FROM users WHERE login = $1 AND password_hash = $2
 	`
+
+	InsertRecord = `
+		INSERT INTO records (id, user_id, label, type, metadata, encrypted_data, file_key, version, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`
 )

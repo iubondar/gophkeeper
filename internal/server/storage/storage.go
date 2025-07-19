@@ -7,6 +7,8 @@ import (
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/queries"
 
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -76,4 +78,21 @@ func (s *Storage) GetUserByLoginAndPassword(ctx context.Context, login string, p
 		return uuid.Nil, err
 	}
 	return userID, nil
+}
+
+func (s *Storage) InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, version int, createdAt, updatedAt time.Time) error {
+	createdAtNull := sql.NullTime{Valid: true, Time: createdAt}
+	updatedAtNull := sql.NullTime{Valid: true, Time: updatedAt}
+	_, err := s.db.ExecContext(ctx, queries.InsertRecord, id, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAtNull, updatedAtNull)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				return models.ErrConflict
+			}
+		}
+		zap.L().Sugar().Debugln("Error inserting record:", err.Error())
+		return err
+	}
+	return nil
 }

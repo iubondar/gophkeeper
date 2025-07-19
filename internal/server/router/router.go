@@ -23,6 +23,7 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 	registerHandler := handlers.NewRegisterHandler(usecase.NewRegisterUsecase(storage))
 	loginHandler := handlers.NewLoginHandler(usecase.NewLoginUsecase(storage))
 	authenticateHandler := handlers.NewAuthenticateHandler(usecase.NewAuthenticateUsecase(storage))
+	uploadHandler := handlers.NewUploadHandler(usecase.NewUploadSecretUsecase(storage))
 
 	// API маршруты
 	router.Route("/api", func(r chi.Router) {
@@ -30,10 +31,8 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 		r.Post("/login", loginHandler.Login)
 		r.Post("/authenticate", authenticateHandler.Authenticate)
 		r.Post("/refresh", handleRefresh)
+		r.Post("/upload", uploadHandler.Upload)
 
-		r.Post("/passwords", handleCreatePassword)
-		r.Post("/notes", handleCreateNote)
-		r.Post("/cards", handleCreateCard)
 		r.Post("/files", handleCreateFile)
 		r.Get("/records/{label}", handleGetRecord)
 		r.Put("/records/{label}", handleUpdateRecord)
@@ -46,21 +45,6 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 func handleRefresh(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"access_token": "new-test-token", "refresh_token": "new-test-refresh", "expires_in": 1800}`))
-}
-
-func handleCreatePassword(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"id": "test-id", "version": 1}`))
-}
-
-func handleCreateNote(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"id": "test-id", "version": 1}`))
-}
-
-func handleCreateCard(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"id": "test-id", "version": 1}`))
 }
 
 func handleCreateFile(w http.ResponseWriter, r *http.Request) {
