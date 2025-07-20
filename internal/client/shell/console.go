@@ -179,3 +179,13 @@ func DisplayCardData(secret *models.CardData, metadata string) {
 	}
 	fmt.Println()
 }
+
+// DisplayFileData отображает данные файла
+func DisplayFileData(secret *models.FileData, metadata string) {
+	fmt.Printf("📁 Файл: %s\n", secret.Name)
+	fmt.Printf("   Путь к файлу: %s\n", secret.FilePath)
+	if metadata != "" {
+		fmt.Printf("   Метаданные: %s\n", metadata)
+	}
+	fmt.Println()
+}

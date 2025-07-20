@@ -36,7 +36,7 @@ func TestGetHandler_GetSecret(t *testing.T) {
 				expectedOut := &models.GetSecretOut{
 					ID:            "test-id",
 					Label:         "test-secret",
-					Type:          "text",
+					Type:          models.SecretTypeText,
 					Metadata:      "test metadata",
 					EncryptedData: []byte("encrypted-data"),
 					FileKey:       "",

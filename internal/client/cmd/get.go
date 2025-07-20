@@ -44,7 +44,7 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 
 	// Проверяем поддерживаемые типы секретов
 	switch secret.Type {
-	case "text", "login_password", "card":
+	case models.SecretTypeText, models.SecretTypeLoginPassword, models.SecretTypeCard, models.SecretTypeFile:
 		// Расшифровываем данные секрета только для поддерживаемых типов
 		decryptedData, err := c.crypto.DecryptString(secret.EncryptedData)
 		if err != nil {
@@ -53,36 +53,47 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 
 		// Обрабатываем секрет в зависимости от его типа
 		switch secret.Type {
-		case "text":
+		case models.SecretTypeText:
 			var textSecret models.TextSecretData
 			if err := json.Unmarshal([]byte(decryptedData), &textSecret); err != nil {
 				return nil, fmt.Errorf("ошибка при разборе текстового секрета: %w", err)
 			}
 			return &GetSecretResult{
-				Type:     "text",
+				Type:     models.SecretTypeText,
 				Data:     &textSecret,
 				Metadata: secret.Metadata,
 			}, nil
 
-		case "login_password":
+		case models.SecretTypeLoginPassword:
 			var loginPassword models.LoginPasswordData
 			if err := json.Unmarshal([]byte(decryptedData), &loginPassword); err != nil {
 				return nil, fmt.Errorf("ошибка при разборе секрета логин/пароль: %w", err)
 			}
 			return &GetSecretResult{
-				Type:     "login_password",
+				Type:     models.SecretTypeLoginPassword,
 				Data:     &loginPassword,
 				Metadata: secret.Metadata,
 			}, nil
 
-		case "card":
+		case models.SecretTypeCard:
 			var cardData models.CardData
 			if err := json.Unmarshal([]byte(decryptedData), &cardData); err != nil {
 				return nil, fmt.Errorf("ошибка при разборе данных карты: %w", err)
 			}
 			return &GetSecretResult{
-				Type:     "card",
+				Type:     models.SecretTypeCard,
 				Data:     &cardData,
+				Metadata: secret.Metadata,
+			}, nil
+
+		case models.SecretTypeFile:
+			var fileData models.FileData
+			if err := json.Unmarshal([]byte(decryptedData), &fileData); err != nil {
+				return nil, fmt.Errorf("ошибка при разборе данных файла: %w", err)
+			}
+			return &GetSecretResult{
+				Type:     models.SecretTypeFile,
+				Data:     &fileData,
 				Metadata: secret.Metadata,
 			}, nil
 		}

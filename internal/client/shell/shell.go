@@ -153,17 +153,21 @@ func (s *Shell) handleCommandResult(commandName string, result any) {
 // displaySecretResult отображает результат получения секрета
 func (s *Shell) displaySecretResult(result *cmd.GetSecretResult) {
 	switch result.Type {
-	case "text":
+	case models.SecretTypeText:
 		if textSecret, ok := result.Data.(*models.TextSecretData); ok {
 			DisplayTextSecret(textSecret, result.Metadata)
 		}
-	case "login_password":
+	case models.SecretTypeLoginPassword:
 		if loginPassword, ok := result.Data.(*models.LoginPasswordData); ok {
 			DisplayLoginPassword(loginPassword, result.Metadata)
 		}
-	case "card":
+	case models.SecretTypeCard:
 		if cardData, ok := result.Data.(*models.CardData); ok {
 			DisplayCardData(cardData, result.Metadata)
+		}
+	case models.SecretTypeFile:
+		if fileData, ok := result.Data.(*models.FileData); ok {
+			DisplayFileData(fileData, result.Metadata)
 		}
 	}
 }

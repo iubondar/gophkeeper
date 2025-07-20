@@ -235,7 +235,7 @@ func (s *StorageTestSuite) TestGetRecordByLabel() {
 	// Создаем тестовую запись
 	recordID := uuid.New()
 	label := "test-secret"
-	recordType := "text"
+	recordType := models.SecretTypeText
 	metadata := "test metadata"
 	encryptedData := []byte("encrypted-data")
 	fileKey := ""

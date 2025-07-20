@@ -30,7 +30,7 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 	case *models.TextSecretData:
 		secretData = models.SecretData{
 			Name:     data.Name,
-			Type:     "text",
+			Type:     models.SecretTypeText,
 			Data:     data.Text,
 			Metadata: data.Metadata,
 		}
@@ -38,7 +38,7 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 	case *models.LoginPasswordData:
 		secretData = models.SecretData{
 			Name:     data.Name,
-			Type:     "login_password",
+			Type:     models.SecretTypeLoginPassword,
 			Data:     fmt.Sprintf("login:%s;password:%s;url:%s", data.Login, data.Password, data.URL),
 			Metadata: data.Metadata,
 		}
@@ -46,7 +46,7 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 	case *models.CardData:
 		secretData = models.SecretData{
 			Name:     data.Name,
-			Type:     "card",
+			Type:     models.SecretTypeCard,
 			Data:     fmt.Sprintf("number:%s;holder:%s;expiry:%s;cvv:%s", data.Number, data.Holder, data.Expiry, data.CVV),
 			Metadata: data.Metadata,
 		}
@@ -54,7 +54,7 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 	case *models.FileData:
 		secretData = models.SecretData{
 			Name:     data.Name,
-			Type:     "file",
+			Type:     models.SecretTypeFile,
 			Data:     data.FilePath,
 			Metadata: data.Metadata,
 		}

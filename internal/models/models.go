@@ -4,6 +4,14 @@ import (
 	"errors"
 )
 
+// Константы для типов секретов
+const (
+	SecretTypeText          = "text"
+	SecretTypeLoginPassword = "login_password"
+	SecretTypeCard          = "card"
+	SecretTypeFile          = "file"
+)
+
 type RegisterIn struct {
 	Login        string `json:"login"`
 	PasswordHash string `json:"password_hash"`

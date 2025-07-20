@@ -72,7 +72,7 @@ func TestGetCommand_Execute(t *testing.T) {
 		{
 			name:       "successful get text secret",
 			secretName: "test-text",
-			secretType: "text",
+			secretType: models.SecretTypeText,
 			setupMock: func(mockClient *MockGophKeeperClient, crypto *crypto.Crypto) {
 				// Создаем тестовые данные
 				textSecret := models.TextSecretData{
@@ -84,7 +84,7 @@ func TestGetCommand_Execute(t *testing.T) {
 
 				mockClient.On("GetSecret", mock.Anything, "test-text").Return(&models.GetSecretOut{
 					Label:         "test-text",
-					Type:          "text",
+					Type:          models.SecretTypeText,
 					Metadata:      "test metadata",
 					EncryptedData: encryptedData,
 				}, nil)
@@ -92,19 +92,26 @@ func TestGetCommand_Execute(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:       "unsupported secret type",
+			name:       "successful get file secret",
 			secretName: "test-file",
-			secretType: "file",
+			secretType: models.SecretTypeFile,
 			setupMock: func(mockClient *MockGophKeeperClient, crypto *crypto.Crypto) {
-				// Для неподдерживаемого типа не нужно шифровать данные
+				// Создаем тестовые данные для файла
+				fileData := models.FileData{
+					Name:     "test-file",
+					FilePath: "/path/to/file.txt",
+				}
+				jsonData, _ := json.Marshal(fileData)
+				encryptedData, _ := crypto.EncryptString(string(jsonData))
+
 				mockClient.On("GetSecret", mock.Anything, "test-file").Return(&models.GetSecretOut{
 					Label:         "test-file",
-					Type:          "file",
-					EncryptedData: []byte("dummy-data"),
+					Type:          models.SecretTypeFile,
+					Metadata:      "test metadata",
+					EncryptedData: encryptedData,
 				}, nil)
 			},
-			expectedError: true,
-			errorContains: "неподдерживаемый тип секрета",
+			expectedError: false,
 		},
 	}
 
@@ -131,7 +138,7 @@ func TestGetCommand_Execute(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				if getResult, ok := result.(*GetSecretResult); ok {
-					assert.Equal(t, "text", getResult.Type)
+					assert.Equal(t, tt.secretType, getResult.Type)
 					assert.NotNil(t, getResult.Data)
 				}
 			}
