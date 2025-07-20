@@ -54,6 +54,12 @@ func (c *RegisterCommand) Execute(ctx context.Context, args any) (any, error) {
 		return nil, fmt.Errorf("ошибка при регистрации: %w", err)
 	}
 
+	// Регистрация выполнена успешно, сохраняем encryptionKey
+	err = c.crypto.GenerateAndStoreEncryptionKey(credentials.Password)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при генерации ключа шифрования: %w", err)
+	}
+
 	return nil, nil
 }
 

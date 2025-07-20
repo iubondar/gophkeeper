@@ -13,19 +13,6 @@ import (
 )
 
 // Crypto предоставляет методы для шифрования и хеширования данных
-//
-// Основные методы:
-// - EncryptString/DecryptString - для шифрования строк
-// - GeneratePasswordHash - для хеширования паролей
-//
-// Пример использования:
-//
-//	crypto := NewCrypto()
-//	crypto.GenerateAndSetSalt()
-//	crypto.GenerateAndStoreEncryptionKey("password")
-//
-//	encrypted, err := crypto.EncryptString("secret data")
-//	decrypted, err := crypto.DecryptString(encrypted)
 const additionalData = "data"
 
 type Crypto struct {
@@ -54,12 +41,22 @@ func (c *Crypto) SetSalt(salt string) {
 
 // calcArgon2Hash вычисляет base64-хеш пароля и соли с помощью Argon2
 func (c *Crypto) calcArgon2Hash(password, salt string) (string, error) {
-	saltBytes, err := base64.StdEncoding.DecodeString(salt)
+	key, err := c.calcArgon2Key(password, salt)
 	if err != nil {
 		return "", err
 	}
-	hash := argon2.IDKey([]byte(password), saltBytes, 1, 64*1024, 4, 32)
-	return base64.StdEncoding.EncodeToString(hash), nil
+	return base64.StdEncoding.EncodeToString(key), nil
+}
+
+// calcArgon2Key вычисляет бинарный ключ шифрования с помощью Argon2
+func (c *Crypto) calcArgon2Key(password, salt string) ([]byte, error) {
+	saltBytes, err := base64.StdEncoding.DecodeString(salt)
+	if err != nil {
+		return nil, err
+	}
+	// 32 байта для AES-256
+	key := argon2.IDKey([]byte(password), saltBytes, 1, 64*1024, 4, 32)
+	return key, nil
 }
 
 // GeneratePasswordHash генерирует хеш пароля с использованием соли (детерминированно, Argon2)
@@ -86,11 +83,12 @@ func (c *Crypto) GenerateAndStoreEncryptionKey(password string) error {
 	if c.salt == "" {
 		return errors.New("salt is not set")
 	}
-	saltBytes, err := base64.StdEncoding.DecodeString(c.salt + additionalData)
+
+	key, err := c.calcArgon2Key(password, c.salt+additionalData)
 	if err != nil {
 		return err
 	}
-	key := argon2.IDKey([]byte(password), saltBytes, 1, 64*1024, 4, 32) // 32 байта для AES-256
+
 	c.encryptionKey = key
 	return nil
 }
