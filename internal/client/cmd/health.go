@@ -16,8 +16,9 @@ func NewHealthCommand(apiClient HealthAPIClient) *HealthCommand {
 	return &HealthCommand{apiClient: apiClient}
 }
 
-func (c *HealthCommand) Execute(ctx context.Context, data any) error {
-	return c.apiClient.HealthCheck(ctx)
+func (c *HealthCommand) Execute(ctx context.Context, data any) (any, error) {
+	err := c.apiClient.HealthCheck(ctx)
+	return nil, err
 }
 
 func (c *HealthCommand) GetName() string {

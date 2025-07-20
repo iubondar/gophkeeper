@@ -30,10 +30,10 @@ func NewLoginCommand(apiClient LoginAPIClient, crypto *crypto.Crypto) *LoginComm
 }
 
 // Execute выполняет процесс входа пользователя
-func (c *LoginCommand) Execute(ctx context.Context, args any) error {
+func (c *LoginCommand) Execute(ctx context.Context, args any) (any, error) {
 	credentials, ok := args.(models.UserCredentials)
 	if !ok {
-		return fmt.Errorf("неверный тип аргументов для команды входа")
+		return nil, fmt.Errorf("неверный тип аргументов для команды входа")
 	}
 
 	// Создаем запрос для входа
@@ -44,13 +44,13 @@ func (c *LoginCommand) Execute(ctx context.Context, args any) error {
 	// Выполняем вход через API клиент
 	salt, err := c.apiClient.Login(ctx, requestBody)
 	if err != nil {
-		return fmt.Errorf("ошибка при входе: %w", err)
+		return nil, fmt.Errorf("ошибка при входе: %w", err)
 	}
 
 	c.crypto.SetSalt(salt)
 	passwordHash, err := c.crypto.GeneratePasswordHash(credentials.Password)
 	if err != nil {
-		return fmt.Errorf("ошибка при генерации пароля: %w", err)
+		return nil, fmt.Errorf("ошибка при генерации пароля: %w", err)
 	}
 
 	// Выполняем аутентификацию через API клиент
@@ -60,10 +60,10 @@ func (c *LoginCommand) Execute(ctx context.Context, args any) error {
 	}
 	err = c.apiClient.Authenticate(ctx, authenticateBody)
 	if err != nil {
-		return fmt.Errorf("ошибка при аутентификации: %w", err)
+		return nil, fmt.Errorf("ошибка при аутентификации: %w", err)
 	}
 
-	return nil
+	return nil, nil
 }
 
 // GetName возвращает имя команды

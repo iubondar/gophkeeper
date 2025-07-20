@@ -21,20 +21,20 @@ func NewDeleteCommand(apiClient GophKeeperClient, crypto *crypto.Crypto) *Delete
 }
 
 // Execute выполняет команду удаления
-func (c *DeleteCommand) Execute(ctx context.Context, args any) error {
+func (c *DeleteCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Получаем название секрета
 	secretName, ok := args.(string)
 	if !ok {
-		return fmt.Errorf("неверный тип аргументов для команды удаления")
+		return nil, fmt.Errorf("неверный тип аргументов для команды удаления")
 	}
 
 	// Выполняем удаление через API клиент
 	err := c.apiClient.DeleteSecret(ctx, secretName)
 	if err != nil {
-		return fmt.Errorf("ошибка при удалении секрета: %w", err)
+		return nil, fmt.Errorf("ошибка при удалении секрета: %w", err)
 	}
 
-	return nil
+	return nil, nil
 }
 
 // GetName возвращает имя команды

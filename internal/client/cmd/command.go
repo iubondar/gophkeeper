@@ -12,7 +12,7 @@ import (
 // GetName - возвращает имя команды
 // GetDescription - возвращает описание команды
 type Command interface {
-	Execute(ctx context.Context, args any) error
+	Execute(ctx context.Context, args any) (any, error)
 	GetName() string
 	GetDescription() string
 }
@@ -63,10 +63,10 @@ func (r *CommandRegistry) GetCommand(name string) (Command, bool) {
 }
 
 // Execute выполняет команду по имени
-func (r *CommandRegistry) Execute(ctx context.Context, commandName string, args any) error {
+func (r *CommandRegistry) Execute(ctx context.Context, commandName string, args any) (any, error) {
 	cmd, exists := r.GetCommand(commandName)
 	if !exists {
-		return fmt.Errorf("команда '%s' не найдена", commandName)
+		return nil, fmt.Errorf("команда '%s' не найдена", commandName)
 	}
 
 	return cmd.Execute(ctx, args)

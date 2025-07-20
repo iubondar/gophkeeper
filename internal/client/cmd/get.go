@@ -2,10 +2,18 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
 )
+
+// GetSecretResult представляет результат выполнения команды get
+type GetSecretResult struct {
+	Type     string      `json:"type"`
+	Data     interface{} `json:"data"`
+	Metadata string      `json:"metadata"`
+}
 
 // GetCommand представляет команду получения секрета
 type GetCommand struct {
@@ -22,38 +30,68 @@ func NewGetCommand(apiClient GophKeeperClient, crypto *crypto.Crypto) *GetComman
 }
 
 // Execute выполняет команду получения
-func (c *GetCommand) Execute(ctx context.Context, args any) error {
+func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Получаем название секрета
 	secretName, ok := args.(string)
 	if !ok {
-		return fmt.Errorf("неверный тип аргументов для команды получения")
+		return nil, fmt.Errorf("неверный тип аргументов для команды получения")
 	}
 
-	// Выполняем получение через API клиент
 	secret, err := c.apiClient.GetSecret(ctx, secretName)
 	if err != nil {
-		return fmt.Errorf("ошибка при получении секрета: %w", err)
+		return nil, fmt.Errorf("ошибка при получении секрета: %w", err)
 	}
 
-	// Расшифровываем только конфиденциальные данные (поле Data)
-	decryptedData, err := c.crypto.DecryptString(secret.EncryptedData)
-	if err != nil {
-		return fmt.Errorf("ошибка при расшифровке секрета: %w", err)
+	// Проверяем поддерживаемые типы секретов
+	switch secret.Type {
+	case "text", "login_password", "card":
+		// Расшифровываем данные секрета только для поддерживаемых типов
+		decryptedData, err := c.crypto.DecryptString(secret.EncryptedData)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при расшифровке секрета: %w", err)
+		}
+
+		// Обрабатываем секрет в зависимости от его типа
+		switch secret.Type {
+		case "text":
+			var textSecret models.TextSecretData
+			if err := json.Unmarshal([]byte(decryptedData), &textSecret); err != nil {
+				return nil, fmt.Errorf("ошибка при разборе текстового секрета: %w", err)
+			}
+			return &GetSecretResult{
+				Type:     "text",
+				Data:     &textSecret,
+				Metadata: secret.Metadata,
+			}, nil
+
+		case "login_password":
+			var loginPassword models.LoginPasswordData
+			if err := json.Unmarshal([]byte(decryptedData), &loginPassword); err != nil {
+				return nil, fmt.Errorf("ошибка при разборе секрета логин/пароль: %w", err)
+			}
+			return &GetSecretResult{
+				Type:     "login_password",
+				Data:     &loginPassword,
+				Metadata: secret.Metadata,
+			}, nil
+
+		case "card":
+			var cardData models.CardData
+			if err := json.Unmarshal([]byte(decryptedData), &cardData); err != nil {
+				return nil, fmt.Errorf("ошибка при разборе данных карты: %w", err)
+			}
+			return &GetSecretResult{
+				Type:     "card",
+				Data:     &cardData,
+				Metadata: secret.Metadata,
+			}, nil
+		}
+
+	default:
+		return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 	}
 
-	// Собираем полную структуру секрета из открытых и расшифрованных данных
-	secretData := models.SecretData{
-		Name:     secret.Label,
-		Type:     secret.Type,
-		Data:     decryptedData,
-		Metadata: secret.Metadata,
-	}
-
-	// TODO: Здесь можно добавить логику для обработки расшифрованного секрета
-	// Например, сохранить в переменную или передать дальше
-	_ = secretData // Пока просто игнорируем, чтобы избежать ошибки компиляции
-
-	return nil
+	return nil, nil
 }
 
 // GetName возвращает имя команды

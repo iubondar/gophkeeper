@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 	"net/http"
 	"strings"
@@ -63,7 +64,7 @@ func (c *APIClient) setAuthCookie(request *resty.Request) error {
 		return errors.New("access token is required")
 	}
 	request.SetCookie(&http.Cookie{
-		Name:  "Authorization",
+		Name:  auth.AuthCookieName,
 		Value: c.accessToken,
 	})
 	return nil
@@ -158,9 +159,30 @@ func (c *APIClient) UpdateSecret(ctx context.Context, secret models.SecretData) 
 
 // GetSecret получает секрет с сервера
 func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error) {
-	// TODO: Implement
+	request := c.httpc.R().
+		SetContext(ctx).
+		SetQueryParam("name", secretName)
 
-	return nil, nil
+	if err := c.setAuthCookie(request); err != nil {
+		return nil, err
+	}
+
+	response, err := request.Get("/api/get")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return nil, err
+	}
+
+	var out models.GetSecretOut
+	err = json.Unmarshal(response.Body(), &out)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get secret response: %w", err)
+	}
+
+	return &out, nil
 }
 
 // DeleteSecret удаляет секрет с сервера

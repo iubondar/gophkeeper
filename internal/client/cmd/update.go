@@ -22,7 +22,7 @@ func NewUpdateCommand(apiClient GophKeeperClient, crypto *crypto.Crypto) *Update
 }
 
 // Execute выполняет команду обновления
-func (c *UpdateCommand) Execute(ctx context.Context, args any) error {
+func (c *UpdateCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Обрабатываем разные типы данных
 	var secretData models.SecretData
 
@@ -60,16 +60,16 @@ func (c *UpdateCommand) Execute(ctx context.Context, args any) error {
 		}
 
 	default:
-		return fmt.Errorf("неподдерживаемый тип данных для обновления")
+		return nil, fmt.Errorf("неподдерживаемый тип данных для обновления")
 	}
 
 	// Выполняем обновление через API клиент
 	err := c.apiClient.UpdateSecret(ctx, secretData)
 	if err != nil {
-		return fmt.Errorf("ошибка при обновлении секрета: %w", err)
+		return nil, fmt.Errorf("ошибка при обновлении секрета: %w", err)
 	}
 
-	return nil
+	return nil, nil
 }
 
 // GetName возвращает имя команды

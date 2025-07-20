@@ -107,3 +107,4 @@ type GetSecretOut struct {
 }
 
 var ErrConflict = errors.New("conflict: resource already exists")
+var ErrRecordNotFound = errors.New("record not found")

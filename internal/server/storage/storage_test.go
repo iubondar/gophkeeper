@@ -222,3 +222,54 @@ func (s *StorageTestSuite) TestInsertRecord() {
 		s.Require().Equal(models.ErrConflict, err)
 	})
 }
+
+func (s *StorageTestSuite) TestGetRecordByLabel() {
+	ctx := context.Background()
+	userID := uuid.New()
+	login := "testuser"
+	passwordHash := "hash"
+	salt := "salt"
+	_, err := s.storage.Register(ctx, userID, login, passwordHash, salt)
+	s.Require().NoError(err)
+
+	// Создаем тестовую запись
+	recordID := uuid.New()
+	label := "test-secret"
+	recordType := "text"
+	metadata := "test metadata"
+	encryptedData := []byte("encrypted-data")
+	fileKey := ""
+	version := 1
+	createdAt := time.Now()
+	updatedAt := time.Now()
+
+	err = s.storage.InsertRecord(ctx, recordID, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+	s.Require().NoError(err)
+
+	s.Run("successful get record", func() {
+		result, err := s.storage.GetRecordByLabel(ctx, label, userID)
+		s.Require().NoError(err)
+		s.Require().NotNil(result)
+		s.Require().Equal(recordID.String(), result.ID)
+		s.Require().Equal(label, result.Label)
+		s.Require().Equal(recordType, result.Type)
+		s.Require().Equal(metadata, result.Metadata)
+		s.Require().Equal(encryptedData, result.EncryptedData)
+		s.Require().Equal(fileKey, result.FileKey)
+		s.Require().Equal(version, result.Version)
+	})
+
+	s.Run("record not found", func() {
+		result, err := s.storage.GetRecordByLabel(ctx, "non-existent", userID)
+		s.Require().Error(err)
+		s.Require().Equal(models.ErrRecordNotFound, err)
+		s.Require().Nil(result)
+	})
+
+	s.Run("wrong user", func() {
+		result, err := s.storage.GetRecordByLabel(ctx, label, uuid.New())
+		s.Require().Error(err)
+		s.Require().Equal(models.ErrRecordNotFound, err)
+		s.Require().Nil(result)
+	})
+}

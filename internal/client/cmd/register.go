@@ -29,16 +29,16 @@ func NewRegisterCommand(apiClient RegisterAPIClient, crypto *crypto.Crypto) *Reg
 }
 
 // Execute выполняет процесс регистрации пользователя
-func (c *RegisterCommand) Execute(ctx context.Context, args any) error {
+func (c *RegisterCommand) Execute(ctx context.Context, args any) (any, error) {
 	credentials, ok := args.(models.UserCredentials)
 	if !ok {
-		return fmt.Errorf("неверный тип аргументов для команды регистрации")
+		return nil, fmt.Errorf("неверный тип аргументов для команды регистрации")
 	}
 
 	salt := c.crypto.GenerateAndSetSalt()
 	passwordHash, err := c.crypto.GeneratePasswordHash(credentials.Password)
 	if err != nil {
-		return fmt.Errorf("ошибка при генерации хеша пароля: %w", err)
+		return nil, fmt.Errorf("ошибка при генерации хеша пароля: %w", err)
 	}
 
 	// Создаем запрос для регистрации
@@ -51,10 +51,10 @@ func (c *RegisterCommand) Execute(ctx context.Context, args any) error {
 	// Выполняем регистрацию через API клиент
 	err = c.apiClient.Register(ctx, requestBody)
 	if err != nil {
-		return fmt.Errorf("ошибка при регистрации: %w", err)
+		return nil, fmt.Errorf("ошибка при регистрации: %w", err)
 	}
 
-	return nil
+	return nil, nil
 }
 
 // GetName возвращает имя команды

@@ -22,7 +22,7 @@ func NewUploadCommand(apiClient GophKeeperClient, crypto *crypto.Crypto) *Upload
 }
 
 // Execute выполняет команду загрузки
-func (c *UploadCommand) Execute(ctx context.Context, args any) error {
+func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Обрабатываем разные типы данных
 	var secretData models.SecretData
 
@@ -60,14 +60,14 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) error {
 		}
 
 	default:
-		return fmt.Errorf("неподдерживаемый тип данных для загрузки")
+		return nil, fmt.Errorf("неподдерживаемый тип данных для загрузки")
 	}
 
 	// Шифруем только конфиденциальные данные (поле Data)
 	// Type и Metadata остаются открытыми для индексации и поиска
 	encryptedData, err := c.crypto.EncryptString(secretData.Data)
 	if err != nil {
-		return fmt.Errorf("ошибка при шифровании данных: %w", err)
+		return nil, fmt.Errorf("ошибка при шифровании данных: %w", err)
 	}
 
 	in := models.UploadSecretIn{
@@ -80,10 +80,10 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) error {
 	// Выполняем загрузку через API клиент
 	err = c.apiClient.UploadSecret(ctx, in)
 	if err != nil {
-		return fmt.Errorf("ошибка при загрузке секрета: %w", err)
+		return nil, fmt.Errorf("ошибка при загрузке секрета: %w", err)
 	}
 
-	return nil
+	return nil, nil
 }
 
 // GetName возвращает имя команды

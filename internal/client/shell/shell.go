@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gophkeeper/internal/client/cmd"
+	"gophkeeper/internal/models"
 )
 
 // Shell представляет интерактивный интерфейс для работы с GophKeeper
@@ -60,10 +61,10 @@ func (s *Shell) Run() error {
 			s.handleDataTypeCommand(commandName)
 			continue
 		default:
-			if err := s.executeCommand(commandName); err != nil {
+			if result, err := s.executeCommand(commandName); err != nil {
 				errorMsg(err)
 			} else {
-				s.printSuccessMessage(commandName)
+				s.handleCommandResult(commandName, result)
 				if (commandName == CommandRegister || commandName == CommandLogin) && s.menuManager.GetCurrentState() == MenuStateMain {
 					switchToUserMenuNotice()
 					s.menuManager.SwitchToState(MenuStateAuthenticated)
@@ -74,31 +75,31 @@ func (s *Shell) Run() error {
 }
 
 // executeCommand выполняет команду с соответствующими аргументами
-func (s *Shell) executeCommand(commandName string) error {
+func (s *Shell) executeCommand(commandName string) (any, error) {
 	ctx := context.Background()
 
 	switch commandName {
 	case CommandRegister:
 		credentials, err := s.inputHandler.GetUserCredentials()
 		if err != nil {
-			return fmt.Errorf("ошибка получения данных пользователя: %w", err)
+			return nil, fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
 		return s.commandRegistry.Execute(ctx, commandName, *credentials)
 
 	case CommandLogin:
 		credentials, err := s.inputHandler.GetLoginCredentials()
 		if err != nil {
-			return fmt.Errorf("ошибка получения данных пользователя: %w", err)
+			return nil, fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
 		return s.commandRegistry.Execute(ctx, commandName, *credentials)
 
 	default:
-		return fmt.Errorf("неизвестная команда: %s", commandName)
+		return nil, fmt.Errorf("неизвестная команда: %s", commandName)
 	}
 }
 
 // executeActionWithType выполняет действие с выбранным типом данных через команды
-func (s *Shell) executeActionWithType(action, dataType string) error {
+func (s *Shell) executeActionWithType(action, dataType string) (any, error) {
 	ctx := context.Background()
 
 	// Получаем данные в зависимости от типа
@@ -115,24 +116,56 @@ func (s *Shell) executeActionWithType(action, dataType string) error {
 	case CommandFile:
 		data, err = s.inputHandler.GetFileData()
 	default:
-		return fmt.Errorf("неизвестный тип данных: %s", dataType)
+		return nil, fmt.Errorf("неизвестный тип данных: %s", dataType)
 	}
 
 	if err != nil {
-		return fmt.Errorf("ошибка получения данных: %w", err)
+		return nil, fmt.Errorf("ошибка получения данных: %w", err)
 	}
 
 	// Для операций get и delete нужен только название секрета
 	if action == CommandGet || action == CommandDelete {
 		secretName, err := s.inputHandler.GetSecretName()
 		if err != nil {
-			return fmt.Errorf("ошибка получения названия секрета: %w", err)
+			return nil, fmt.Errorf("ошибка получения названия секрета: %w", err)
 		}
 		data = secretName
 	}
 
 	// Выполняем команду через реестр команд
 	return s.commandRegistry.Execute(ctx, action, data)
+}
+
+// handleCommandResult обрабатывает результат выполнения команды
+func (s *Shell) handleCommandResult(commandName string, result any) {
+	// Обрабатываем специальные случаи для команды get
+	if commandName == CommandGet {
+		if getResult, ok := result.(*cmd.GetSecretResult); ok {
+			s.displaySecretResult(getResult)
+			return
+		}
+	}
+
+	// Для остальных команд просто показываем сообщение об успехе
+	s.printSuccessMessage(commandName)
+}
+
+// displaySecretResult отображает результат получения секрета
+func (s *Shell) displaySecretResult(result *cmd.GetSecretResult) {
+	switch result.Type {
+	case "text":
+		if textSecret, ok := result.Data.(*models.TextSecretData); ok {
+			DisplayTextSecret(textSecret, result.Metadata)
+		}
+	case "login_password":
+		if loginPassword, ok := result.Data.(*models.LoginPasswordData); ok {
+			DisplayLoginPassword(loginPassword, result.Metadata)
+		}
+	case "card":
+		if cardData, ok := result.Data.(*models.CardData); ok {
+			DisplayCardData(cardData, result.Metadata)
+		}
+	}
 }
 
 func (s *Shell) printSuccessMessage(commandName string) {
@@ -156,7 +189,8 @@ func (s *Shell) printSuccessMessage(commandName string) {
 
 // checkServerHealth проверяет доступность сервера
 func (s *Shell) checkServerHealth() error {
-	return s.commandRegistry.Execute(context.Background(), "health", nil)
+	_, err := s.commandRegistry.Execute(context.Background(), "health", nil)
+	return err
 }
 
 // Добавляем приватные методы-обработчики
@@ -186,10 +220,10 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 	actionState := s.menuManager.GetActionState()
 	if actionState != nil {
 		actionState.Type = commandName
-		if err := s.executeActionWithType(actionState.Action, actionState.Type); err != nil {
+		if result, err := s.executeActionWithType(actionState.Action, actionState.Type); err != nil {
 			errorMsg(err)
 		} else {
-			s.printSuccessMessage(actionState.Action)
+			s.handleCommandResult(actionState.Action, result)
 		}
 		s.menuManager.ClearActionState()
 		s.menuManager.SwitchToState(MenuStateAuthenticated)

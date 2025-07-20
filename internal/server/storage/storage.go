@@ -96,3 +96,23 @@ func (s *Storage) InsertRecord(ctx context.Context, id, userID uuid.UUID, label,
 	}
 	return nil
 }
+
+func (s *Storage) GetRecordByLabel(ctx context.Context, label string, userID uuid.UUID) (*models.GetSecretOut, error) {
+	var record models.GetSecretOut
+	var id uuid.UUID
+	var createdAt, updatedAt sql.NullTime
+
+	err := s.db.QueryRowContext(ctx, queries.GetRecordByLabel, label, userID).Scan(
+		&id, &record.Label, &record.Type, &record.Metadata, &record.EncryptedData, &record.FileKey, &record.Version, &createdAt, &updatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, models.ErrRecordNotFound
+		}
+		zap.L().Sugar().Debugln("Error getting record by label:", err.Error())
+		return nil, err
+	}
+
+	record.ID = id.String()
+	return &record, nil
+}
