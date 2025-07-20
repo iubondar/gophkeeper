@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
@@ -28,34 +29,50 @@ func (c *UpdateCommand) Execute(ctx context.Context, args any) (any, error) {
 
 	switch data := args.(type) {
 	case *models.TextSecretData:
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при сериализации текстовых данных: %w", err)
+		}
 		secretData = models.SecretData{
 			Name:     data.Name,
 			Type:     models.SecretTypeText,
-			Data:     data.Text,
+			Data:     string(jsonData),
 			Metadata: data.Metadata,
 		}
 
 	case *models.LoginPasswordData:
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при сериализации данных логина/пароля: %w", err)
+		}
 		secretData = models.SecretData{
 			Name:     data.Name,
 			Type:     models.SecretTypeLoginPassword,
-			Data:     fmt.Sprintf("login:%s;password:%s;url:%s", data.Login, data.Password, data.URL),
+			Data:     string(jsonData),
 			Metadata: data.Metadata,
 		}
 
 	case *models.CardData:
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при сериализации данных карты: %w", err)
+		}
 		secretData = models.SecretData{
 			Name:     data.Name,
 			Type:     models.SecretTypeCard,
-			Data:     fmt.Sprintf("number:%s;holder:%s;expiry:%s;cvv:%s", data.Number, data.Holder, data.Expiry, data.CVV),
+			Data:     string(jsonData),
 			Metadata: data.Metadata,
 		}
 
 	case *models.FileData:
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при сериализации данных файла: %w", err)
+		}
 		secretData = models.SecretData{
 			Name:     data.Name,
 			Type:     models.SecretTypeFile,
-			Data:     data.FilePath,
+			Data:     string(jsonData),
 			Metadata: data.Metadata,
 		}
 

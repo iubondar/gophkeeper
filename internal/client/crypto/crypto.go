@@ -96,7 +96,6 @@ func (c *Crypto) GenerateAndStoreEncryptionKey(password string) error {
 }
 
 // EncryptString шифрует строку с использованием AES-GCM
-// и возвращает зашифрованные бинарные данные (без base64)
 func (c *Crypto) EncryptString(plaintext string) ([]byte, error) {
 	if c.encryptionKey == nil {
 		return nil, errors.New("encryption key is not set")
