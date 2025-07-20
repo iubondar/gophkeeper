@@ -84,7 +84,17 @@ func (c *Crypto) GenerateAndStoreEncryptionKey(password string) error {
 		return errors.New("salt is not set")
 	}
 
-	key, err := c.calcArgon2Key(password, c.salt+additionalData)
+	// Декодируем соль из base64
+	saltBytes, err := base64.StdEncoding.DecodeString(c.salt)
+	if err != nil {
+		return fmt.Errorf("invalid salt format: %w", err)
+	}
+
+	// Создаем новую соль для шифрования, добавляя additionalData к байтам
+	encryptionSaltBytes := append(saltBytes, []byte(additionalData)...)
+	encryptionSalt := base64.StdEncoding.EncodeToString(encryptionSaltBytes)
+
+	key, err := c.calcArgon2Key(password, encryptionSalt)
 	if err != nil {
 		return err
 	}

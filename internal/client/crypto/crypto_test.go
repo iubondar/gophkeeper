@@ -219,3 +219,28 @@ func TestEncryptionKeyConsistency(t *testing.T) {
 	t.Logf("Длина зашифрованных данных 1: %d байт", len(encrypted1))
 	t.Logf("Длина зашифрованных данных 2: %d байт", len(encrypted2))
 }
+
+func TestGenerateAndStoreEncryptionKey_Base64Issue(t *testing.T) {
+	crypto := NewCrypto()
+
+	// Используем реальную соль, которая могла бы вызвать проблему
+	salt := "dGVzdC1zYWx0" // base64 encoded "test-salt"
+	crypto.SetSalt(salt)
+
+	password := "test_password"
+
+	// Это должно работать без ошибок base64
+	err := crypto.GenerateAndStoreEncryptionKey(password)
+	assert.NoError(t, err)
+	assert.NotNil(t, crypto.encryptionKey)
+	assert.Len(t, crypto.encryptionKey, 32, "Ключ должен быть 32 байта для AES-256")
+
+	// Проверяем, что шифрование и дешифрование работают
+	testData := "test data"
+	encrypted, err := crypto.EncryptString(testData)
+	assert.NoError(t, err)
+
+	decrypted, err := crypto.DecryptString(encrypted)
+	assert.NoError(t, err)
+	assert.Equal(t, testData, decrypted)
+}
