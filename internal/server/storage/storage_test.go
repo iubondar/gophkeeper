@@ -65,25 +65,98 @@ func TestStorageSuite(t *testing.T) {
 	suite.Run(t, new(StorageTestSuite))
 }
 
+func (s *StorageTestSuite) TestCheckStatus() {
+	ctx := context.Background()
+
+	s.Run("successful status check", func() {
+		err := s.storage.CheckStatus(ctx)
+		s.Require().NoError(err)
+	})
+}
+
 func (s *StorageTestSuite) TestRegister() {
-	// ctx := context.Background()
-	// userID := uuid.New()
-	// login := "testuser"
-	// password := "password123"
-	// passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	// require.NoError(s.T(), err)
+	ctx := context.Background()
+	userID := uuid.New()
+	login := "testuser"
+	passwordHash := "password123"
+	salt := "salt123"
 
-	// s.Run("successful registration", func() {
-	// 	ok, err := s.storage.Register(ctx, userID, login, string(passwordHash))
-	// 	assert.NoError(s.T(), err)
-	// 	assert.True(s.T(), ok)
-	// })
+	s.Run("successful registration", func() {
+		ok, err := s.storage.Register(ctx, userID, login, passwordHash, salt)
+		s.Require().NoError(err)
+		s.Require().True(ok)
+	})
 
-	// s.Run("duplicate registration", func() {
-	// 	ok, err := s.storage.Register(ctx, userID, login, string(passwordHash))
-	// 	assert.NoError(s.T(), err)
-	// 	assert.False(s.T(), ok)
-	// })
+	s.Run("duplicate registration with same login", func() {
+		userID2 := uuid.New()
+		ok, err := s.storage.Register(ctx, userID2, login, passwordHash, salt)
+		s.Require().Error(err)
+		s.Require().False(ok)
+		s.Require().Equal(models.ErrUserAlreadyExists, err)
+	})
+
+	s.Run("duplicate registration with same user ID", func() {
+		ok, err := s.storage.Register(ctx, userID, "differentlogin", passwordHash, salt)
+		s.Require().Error(err)
+		s.Require().False(ok)
+		// Это должно вызвать ошибку primary key violation
+	})
+}
+
+func (s *StorageTestSuite) TestGetUserSalt() {
+	ctx := context.Background()
+	userID := uuid.New()
+	login := "testuser"
+	passwordHash := "password123"
+	salt := "salt123"
+
+	s.Run("get salt for existing user", func() {
+		// Сначала регистрируем пользователя
+		_, err := s.storage.Register(ctx, userID, login, passwordHash, salt)
+		s.Require().NoError(err)
+
+		// Получаем соль
+		retrievedSalt, err := s.storage.GetUserSalt(ctx, login)
+		s.Require().NoError(err)
+		s.Require().Equal(salt, retrievedSalt)
+	})
+
+	s.Run("get salt for non-existing user", func() {
+		retrievedSalt, err := s.storage.GetUserSalt(ctx, "nonexistent")
+		s.Require().NoError(err)
+		s.Require().Equal("", retrievedSalt)
+	})
+}
+
+func (s *StorageTestSuite) TestGetUserByLoginAndPassword() {
+	ctx := context.Background()
+	userID := uuid.New()
+	login := "testuser"
+	passwordHash := "password123"
+	salt := "salt123"
+
+	s.Run("get user with correct credentials", func() {
+		// Сначала регистрируем пользователя
+		_, err := s.storage.Register(ctx, userID, login, passwordHash, salt)
+		s.Require().NoError(err)
+
+		// Получаем пользователя по логину и паролю
+		retrievedUserID, err := s.storage.GetUserByLoginAndPassword(ctx, login, passwordHash)
+		s.Require().NoError(err)
+		s.Require().Equal(userID, retrievedUserID)
+	})
+
+	s.Run("get user with incorrect password", func() {
+		retrievedUserID, err := s.storage.GetUserByLoginAndPassword(ctx, login, "wrongpassword")
+		s.Require().NoError(err)
+		s.Require().Equal(uuid.Nil, retrievedUserID)
+	})
+
+	s.Run("get user with non-existing login", func() {
+		retrievedUserID, err := s.storage.GetUserByLoginAndPassword(ctx, "nonexistent", passwordHash)
+		s.Require().NoError(err)
+		s.Require().Equal(uuid.Nil, retrievedUserID)
+	})
 }
 
 func (s *StorageTestSuite) TestInsertRecord() {
@@ -106,13 +179,46 @@ func (s *StorageTestSuite) TestInsertRecord() {
 	_, err := s.storage.Register(ctx, userID, login, passwordHash, salt)
 	s.Require().NoError(err)
 
-	// Тест успешной вставки
-	err = s.storage.InsertRecord(ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
-	s.Require().NoError(err)
+	s.Run("successful record insertion", func() {
+		err = s.storage.InsertRecord(ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		s.Require().NoError(err)
+	})
 
-	// Тест конфликта - попытка вставить запись с тем же label
-	id2 := uuid.New()
-	err = s.storage.InsertRecord(ctx, id2, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
-	s.Require().Error(err)
-	s.Require().Equal(models.ErrConflict, err)
+	s.Run("conflict on duplicate label", func() {
+		id2 := uuid.New()
+		err = s.storage.InsertRecord(ctx, id2, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		s.Require().Error(err)
+		s.Require().Equal(models.ErrConflict, err)
+	})
+
+	s.Run("conflict on duplicate record ID", func() {
+		err = s.storage.InsertRecord(ctx, id, userID, "different-label", recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		s.Require().Error(err)
+		// Это должно вызвать ошибку primary key violation
+	})
+
+	s.Run("insert record with different user", func() {
+		userID2 := uuid.New()
+		login2 := "testuser2"
+		_, err := s.storage.Register(ctx, userID2, login2, passwordHash, salt)
+		s.Require().NoError(err)
+
+		id3 := uuid.New()
+		label2 := "test-label-2"
+		err = s.storage.InsertRecord(ctx, id3, userID2, label2, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		s.Require().NoError(err)
+	})
+
+	s.Run("insert record with same label for different user", func() {
+		userID3 := uuid.New()
+		login3 := "testuser3"
+		_, err := s.storage.Register(ctx, userID3, login3, passwordHash, salt)
+		s.Require().NoError(err)
+
+		id4 := uuid.New()
+		// Используем тот же label, но для другого пользователя
+		err = s.storage.InsertRecord(ctx, id4, userID3, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		s.Require().Error(err)
+		s.Require().Equal(models.ErrConflict, err)
+	})
 }
