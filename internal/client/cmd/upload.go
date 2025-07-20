@@ -29,7 +29,6 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 
 	switch data := args.(type) {
 	case *models.TextSecretData:
-		// Сериализуем данные в JSON
 		jsonData, err := json.Marshal(data)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при сериализации текстовых данных: %w", err)
@@ -42,7 +41,6 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 		}
 
 	case *models.LoginPasswordData:
-		// Сериализуем данные в JSON
 		jsonData, err := json.Marshal(data)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при сериализации данных логина/пароля: %w", err)
@@ -55,7 +53,6 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 		}
 
 	case *models.CardData:
-		// Сериализуем данные в JSON
 		jsonData, err := json.Marshal(data)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при сериализации данных карты: %w", err)
@@ -68,7 +65,6 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 		}
 
 	case *models.FileData:
-		// Сериализуем данные в JSON
 		jsonData, err := json.Marshal(data)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при сериализации данных файла: %w", err)

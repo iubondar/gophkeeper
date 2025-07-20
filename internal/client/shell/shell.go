@@ -81,43 +81,39 @@ func (s *Shell) Run() error {
 func (s *Shell) executeCommand(commandName string) (any, error) {
 	ctx := context.Background()
 
+	var data any
+	var err error
+
 	switch commandName {
 	case CommandRegister:
 		credentials, err := s.inputHandler.GetUserCredentials()
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
-		return s.commandRegistry.Execute(ctx, commandName, *credentials)
+		data = *credentials
 
 	case CommandLogin:
 		credentials, err := s.inputHandler.GetLoginCredentials()
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
-		return s.commandRegistry.Execute(ctx, commandName, *credentials)
+		data = *credentials
 
-	default:
-		return nil, fmt.Errorf("неизвестная команда: %s", commandName)
-	}
-}
-
-// executeActionWithType выполняет действие с выбранным типом данных через команды
-func (s *Shell) executeActionWithType(action, dataType string) (any, error) {
-	ctx := context.Background()
-
-	var data any
-	var err error
-
-	// Для операций get и delete нужен только название секрета
-	if action == CommandGet || action == CommandDelete {
+	case CommandGet, CommandDelete:
 		secretName, err := s.inputHandler.GetSecretName()
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения названия секрета: %w", err)
 		}
 		data = secretName
-	} else {
-		// Для остальных операций получаем данные в зависимости от типа
-		switch dataType {
+
+	case CommandUpload, CommandUpdate:
+		// Для upload и update нужен тип данных, который должен быть передан через контекст меню
+		actionState := s.menuManager.GetActionState()
+		if actionState == nil || actionState.Type == "" {
+			return nil, fmt.Errorf("тип данных не выбран")
+		}
+
+		switch actionState.Type {
 		case CommandText:
 			data, err = s.inputHandler.GetTextData()
 		case CommandLoginPassword:
@@ -127,16 +123,19 @@ func (s *Shell) executeActionWithType(action, dataType string) (any, error) {
 		case CommandFile:
 			data, err = s.inputHandler.GetFileData()
 		default:
-			return nil, fmt.Errorf("неизвестный тип данных: %s", dataType)
+			return nil, fmt.Errorf("неизвестный тип данных: %s", actionState.Type)
 		}
 
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения данных: %w", err)
 		}
+
+	default:
+		return nil, fmt.Errorf("неизвестная команда: %s", commandName)
 	}
 
 	// Выполняем команду через реестр команд
-	return s.commandRegistry.Execute(ctx, action, data)
+	return s.commandRegistry.Execute(ctx, commandName, data)
 }
 
 // handleCommandResult обрабатывает результат выполнения команды
@@ -227,7 +226,7 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 	actionState := s.menuManager.GetActionState()
 	if actionState != nil {
 		actionState.Type = commandName
-		if result, err := s.executeActionWithType(actionState.Action, actionState.Type); err != nil {
+		if result, err := s.executeCommand(actionState.Action); err != nil {
 			errorMsg(err)
 		} else {
 			s.handleCommandResult(actionState.Action, result)
@@ -238,7 +237,7 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 }
 
 func (s *Shell) handleGetDeleteCommand(commandName string) {
-	if result, err := s.executeActionWithType(commandName, ""); err != nil {
+	if result, err := s.executeCommand(commandName); err != nil {
 		errorMsg(err)
 	} else {
 		s.handleCommandResult(commandName, result)
