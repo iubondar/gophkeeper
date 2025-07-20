@@ -76,3 +76,58 @@ func TestGzipCompression(t *testing.T) {
 		assert.JSONEq(t, successBody, string(b))
 	})
 }
+
+func TestGzipWriter_NoDuplicateWriteHeader(t *testing.T) {
+	// Создаем тестовый ResponseWriter
+	recorder := httptest.NewRecorder()
+
+	// Создаем gzipWriter
+	gw := newGzipWriter(recorder)
+
+	// Устанавливаем заголовки
+	gw.Header().Set("Content-Type", "application/json")
+
+	// Вызываем WriteHeader первый раз
+	gw.WriteHeader(http.StatusOK)
+
+	// Пытаемся вызвать WriteHeader второй раз - это не должно вызвать ошибку
+	gw.WriteHeader(http.StatusInternalServerError)
+
+	// Проверяем, что статус остался первым установленным
+	if recorder.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	// Проверяем, что заголовок Content-Encoding установлен
+	if recorder.Header().Get("Content-Encoding") != "gzip" {
+		t.Errorf("Expected Content-Encoding: gzip, got %s", recorder.Header().Get("Content-Encoding"))
+	}
+
+	// Закрываем writer
+	gw.Close()
+}
+
+func TestGzipWriter_WriteBeforeWriteHeader(t *testing.T) {
+	// Создаем тестовый ResponseWriter
+	recorder := httptest.NewRecorder()
+
+	// Создаем gzipWriter
+	gw := newGzipWriter(recorder)
+
+	// Устанавливаем заголовки
+	gw.Header().Set("Content-Type", "application/json")
+
+	// Записываем данные до WriteHeader
+	_, err := gw.Write([]byte("test data"))
+	if err != nil {
+		t.Errorf("Write failed: %v", err)
+	}
+
+	// Проверяем, что заголовок Content-Encoding установлен после Write
+	if recorder.Header().Get("Content-Encoding") != "gzip" {
+		t.Errorf("Expected Content-Encoding: gzip, got %s", recorder.Header().Get("Content-Encoding"))
+	}
+
+	// Закрываем writer
+	gw.Close()
+}

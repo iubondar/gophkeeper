@@ -44,5 +44,6 @@ func (handler HealthHandler) Health(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
 }

@@ -47,10 +47,10 @@ func (handler GetHandler) GetSecret(res http.ResponseWriter, req *http.Request) 
 	}
 
 	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(res).Encode(result); err != nil {
 		zap.L().Sugar().Debugln("Failed to encode response", zap.Error(err))
 		models.EncodeError(res, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
-	res.WriteHeader(http.StatusOK)
 }

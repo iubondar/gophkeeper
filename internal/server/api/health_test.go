@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"gophkeeper/internal/models"
+	"gophkeeper/internal/server/compress"
 	"gophkeeper/internal/server/storage/mocks"
 
 	"github.com/stretchr/testify/assert"
@@ -123,5 +124,44 @@ func TestHealthHandler_Health(t *testing.T) {
 				assert.Equal(t, *tt.wantBody, got)
 			}
 		})
+	}
+}
+
+func TestHealthHandler_NoDuplicateWriteHeader(t *testing.T) {
+	// Создаем mock для StatusChecker
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockChecker := mocks.NewMockStatusChecker(ctrl)
+	mockChecker.EXPECT().CheckStatus(gomock.Any()).Return(nil)
+
+	// Создаем handler
+	handler := NewHealthHandler(mockChecker)
+
+	// Создаем запрос с поддержкой gzip
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+
+	// Создаем ResponseWriter
+	w := httptest.NewRecorder()
+
+	// Создаем middleware
+	middleware := compress.WithGzipCompression(http.HandlerFunc(handler.Health))
+
+	// Выполняем запрос
+	middleware.ServeHTTP(w, req)
+
+	// Проверяем, что статус установлен правильно
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	// Проверяем, что заголовок Content-Type установлен
+	if w.Header().Get("Content-Type") != "application/json" {
+		t.Errorf("Expected Content-Type: application/json, got %s", w.Header().Get("Content-Type"))
+	}
+
+	// Проверяем, что заголовок Content-Encoding установлен (если поддерживается gzip)
+	if w.Header().Get("Content-Encoding") != "gzip" {
+		t.Errorf("Expected Content-Encoding: gzip, got %s", w.Header().Get("Content-Encoding"))
 	}
 }
