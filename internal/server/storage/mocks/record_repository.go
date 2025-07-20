@@ -82,16 +82,16 @@ func (m *MockUploadSecretUsecase) EXPECT() *MockUploadSecretUsecaseMockRecorder 
 }
 
 // UploadSecret mocks base method.
-func (m *MockUploadSecretUsecase) UploadSecret(ctx context.Context, in models.UploadSecretIn) (models.UploadSecretOut, error) {
+func (m *MockUploadSecretUsecase) UploadSecret(ctx context.Context, in models.UploadSecretIn, userID uuid.UUID) (models.UploadSecretOut, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadSecret", ctx, in)
+	ret := m.ctrl.Call(m, "UploadSecret", ctx, in, userID)
 	ret0, _ := ret[0].(models.UploadSecretOut)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UploadSecret indicates an expected call of UploadSecret.
-func (mr *MockUploadSecretUsecaseMockRecorder) UploadSecret(ctx, in any) *gomock.Call {
+func (mr *MockUploadSecretUsecaseMockRecorder) UploadSecret(ctx, in, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadSecret", reflect.TypeOf((*MockUploadSecretUsecase)(nil).UploadSecret), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadSecret", reflect.TypeOf((*MockUploadSecretUsecase)(nil).UploadSecret), ctx, in, userID)
 }

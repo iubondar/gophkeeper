@@ -22,9 +22,9 @@ type GophKeeperClient interface {
 	Register(ctx context.Context, in models.RegisterIn) error
 	Login(ctx context.Context, in models.LoginIn) (salt string, err error)
 	Authenticate(ctx context.Context, in models.AuthenticateIn) error
-	UploadSecret(ctx context.Context, secret models.SecretData) error
+	UploadSecret(ctx context.Context, in models.UploadSecretIn) error
 	UpdateSecret(ctx context.Context, secret models.SecretData) error
-	GetSecret(ctx context.Context, secretName string) (*models.SecretData, error)
+	GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error)
 	DeleteSecret(ctx context.Context, secretName string) error
 	HealthCheck(ctx context.Context) error
 }

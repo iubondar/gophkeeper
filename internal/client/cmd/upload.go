@@ -63,8 +63,22 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) error {
 		return fmt.Errorf("неподдерживаемый тип данных для загрузки")
 	}
 
+	// Шифруем только конфиденциальные данные (поле Data)
+	// Type и Metadata остаются открытыми для индексации и поиска
+	encryptedData, err := c.crypto.EncryptString(secretData.Data)
+	if err != nil {
+		return fmt.Errorf("ошибка при шифровании данных: %w", err)
+	}
+
+	in := models.UploadSecretIn{
+		Label:         secretData.Name,
+		Type:          secretData.Type,
+		Metadata:      secretData.Metadata,
+		EncryptedData: encryptedData,
+	}
+
 	// Выполняем загрузку через API клиент
-	err := c.apiClient.UploadSecret(ctx, secretData)
+	err = c.apiClient.UploadSecret(ctx, in)
 	if err != nil {
 		return fmt.Errorf("ошибка при загрузке секрета: %w", err)
 	}

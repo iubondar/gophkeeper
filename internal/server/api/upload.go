@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/usecase"
 
@@ -25,9 +26,16 @@ func (handler UploadHandler) Upload(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	userID, err := auth.GetUserIDFromReq(req)
+	if err != nil {
+		zap.L().Sugar().Debugln("Failed to get user ID", zap.Error(err))
+		models.EncodeError(res, "Failed to get user ID", http.StatusUnauthorized)
+		return
+	}
+
 	var in models.UploadSecretIn
 	var buf bytes.Buffer
-	_, err := buf.ReadFrom(req.Body)
+	_, err = buf.ReadFrom(req.Body)
 	if err != nil {
 		models.EncodeError(res, err.Error(), http.StatusBadRequest)
 		return
@@ -38,7 +46,7 @@ func (handler UploadHandler) Upload(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	result, err := handler.uc.UploadSecret(req.Context(), in)
+	result, err := handler.uc.UploadSecret(req.Context(), in, userID)
 	if err != nil {
 		zap.L().Sugar().Debugln("Failed to upload secret", zap.Error(err))
 		models.EncodeError(res, "Failed to upload secret", http.StatusInternalServerError)

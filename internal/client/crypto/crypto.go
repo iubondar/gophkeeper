@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +12,20 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+// Crypto предоставляет методы для шифрования и хеширования данных
+//
+// Основные методы:
+// - EncryptString/DecryptString - для шифрования строк
+// - GeneratePasswordHash - для хеширования паролей
+//
+// Пример использования:
+//
+//	crypto := NewCrypto()
+//	crypto.GenerateAndSetSalt()
+//	crypto.GenerateAndStoreEncryptionKey("password")
+//
+//	encrypted, err := crypto.EncryptString("secret data")
+//	decrypted, err := crypto.DecryptString(encrypted)
 const additionalData = "data"
 
 type Crypto struct {
@@ -73,7 +86,7 @@ func (c *Crypto) GenerateAndStoreEncryptionKey(password string) error {
 	if c.salt == "" {
 		return errors.New("salt is not set")
 	}
-	saltBytes, err := base64.StdEncoding.DecodeString(c.salt)
+	saltBytes, err := base64.StdEncoding.DecodeString(c.salt + additionalData)
 	if err != nil {
 		return err
 	}
@@ -82,16 +95,38 @@ func (c *Crypto) GenerateAndStoreEncryptionKey(password string) error {
 	return nil
 }
 
-// EncryptJSON шифрует JSON-объект с использованием AES-GCM
-// и возвращает зашифрованную строку в base64
-func (c *Crypto) EncryptJSON(object any) (string, error) {
+// EncryptString шифрует строку с использованием AES-GCM
+// и возвращает зашифрованные бинарные данные (без base64)
+func (c *Crypto) EncryptString(plaintext string) ([]byte, error) {
 	if c.encryptionKey == nil {
-		return "", errors.New("encryption key is not set")
+		return nil, errors.New("encryption key is not set")
 	}
 
-	plaintext, err := json.Marshal(object)
+	block, err := aes.NewCipher(c.encryptionKey)
 	if err != nil {
-		return "", fmt.Errorf("marshal json: %w", err)
+		return nil, fmt.Errorf("new cipher: %w", err)
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("new GCM: %w", err)
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, fmt.Errorf("generate nonce: %w", err)
+	}
+
+	ciphertext := gcm.Seal(nil, nonce, []byte(plaintext), nil)
+
+	// Префикс: nonce || ciphertext
+	return append(nonce, ciphertext...), nil
+}
+
+// DecryptString расшифровывает бинарные данные и возвращает строку
+func (c *Crypto) DecryptString(encryptedData []byte) (string, error) {
+	if c.encryptionKey == nil {
+		return "", errors.New("encryption key is not set")
 	}
 
 	block, err := aes.NewCipher(c.encryptionKey)
@@ -104,56 +139,18 @@ func (c *Crypto) EncryptJSON(object any) (string, error) {
 		return "", fmt.Errorf("new GCM: %w", err)
 	}
 
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", fmt.Errorf("generate nonce: %w", err)
-	}
-
-	ciphertext := gcm.Seal(nil, nonce, plaintext, nil)
-
-	// Префикс: nonce || ciphertext
-	full := append(nonce, ciphertext...)
-	return base64.StdEncoding.EncodeToString(full), nil
-}
-
-// DecryptJSON расшифровывает зашифрованную строку в base64 и преобразует ее в JSON-объект
-// и сохраняет результат в out
-func (c *Crypto) DecryptJSON(encoded string, out any) error {
-	if c.encryptionKey == nil {
-		return errors.New("encryption key is not set")
-	}
-
-	full, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return fmt.Errorf("decode base64: %w", err)
-	}
-
-	block, err := aes.NewCipher(c.encryptionKey)
-	if err != nil {
-		return fmt.Errorf("new cipher: %w", err)
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return fmt.Errorf("new GCM: %w", err)
-	}
-
 	nonceSize := gcm.NonceSize()
-	if len(full) < nonceSize {
-		return fmt.Errorf("invalid encrypted data")
+	if len(encryptedData) < nonceSize {
+		return "", fmt.Errorf("invalid encrypted data")
 	}
 
-	nonce := full[:nonceSize]
-	ciphertext := full[nonceSize:]
+	nonce := encryptedData[:nonceSize]
+	ciphertext := encryptedData[nonceSize:]
 
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return fmt.Errorf("decrypt: %w", err)
+		return "", fmt.Errorf("decrypt: %w", err)
 	}
 
-	if err := json.Unmarshal(plaintext, out); err != nil {
-		return fmt.Errorf("unmarshal json: %w", err)
-	}
-
-	return nil
+	return string(plaintext), nil
 }

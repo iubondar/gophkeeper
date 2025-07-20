@@ -115,8 +115,19 @@ func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) 
 }
 
 // UploadSecret загружает секрет на сервер
-func (c *APIClient) UploadSecret(ctx context.Context, secret models.SecretData) error {
-	// TODO: Implement
+func (c *APIClient) UploadSecret(ctx context.Context, in models.UploadSecretIn) error {
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		SetBody(in).
+		Post("/api/upload")
+
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -129,7 +140,7 @@ func (c *APIClient) UpdateSecret(ctx context.Context, secret models.SecretData) 
 }
 
 // GetSecret получает секрет с сервера
-func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.SecretData, error) {
+func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error) {
 	// TODO: Implement
 
 	return nil, nil

@@ -6,9 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -17,10 +19,16 @@ func TestUploadHandler_Upload(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	// Создаем тестовый userID и токен
+	testUserID := uuid.New()
+	token, err := auth.GenerateAccessToken(testUserID.String())
+	assert.NoError(t, err)
+
 	tests := []struct {
 		name           string
 		method         string
 		body           []byte
+		withAuth       bool
 		ucResult       models.UploadSecretOut
 		ucError        error
 		expectedStatus int
@@ -29,16 +37,25 @@ func TestUploadHandler_Upload(t *testing.T) {
 		{
 			name:           "Successful upload",
 			method:         http.MethodPost,
-			body:           mustMarshal(t, models.UploadSecretIn{UserID: "b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b3b3", Label: "test", Type: "note", Metadata: "meta", EncryptedData: "data", FileKey: "key", Version: 1}),
+			body:           mustMarshal(t, models.UploadSecretIn{Label: "test", Type: "note", Metadata: "meta", EncryptedData: []byte("data"), FileKey: "key"}),
+			withAuth:       true,
 			ucResult:       models.UploadSecretOut{ID: "id-123", Version: 1},
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Usecase error",
 			method:         http.MethodPost,
-			body:           mustMarshal(t, models.UploadSecretIn{UserID: "b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b3b3", Label: "test", Type: "note"}),
+			body:           mustMarshal(t, models.UploadSecretIn{Label: "test", Type: "note"}),
+			withAuth:       true,
 			ucError:        assert.AnError,
 			expectedStatus: http.StatusInternalServerError,
+		},
+		{
+			name:           "Unauthorized - no auth cookie",
+			method:         http.MethodPost,
+			body:           mustMarshal(t, models.UploadSecretIn{Label: "test", Type: "note"}),
+			withAuth:       false,
+			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			name:           "Wrong HTTP method",
@@ -49,6 +66,7 @@ func TestUploadHandler_Upload(t *testing.T) {
 			name:           "Invalid JSON",
 			method:         http.MethodPost,
 			body:           []byte("invalid json"),
+			withAuth:       true,
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
@@ -56,9 +74,9 @@ func TestUploadHandler_Upload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUc := mocks.NewMockUploadSecretUsecase(ctrl)
-			if tt.method == http.MethodPost && tt.name != "Invalid JSON" {
+			if tt.method == http.MethodPost && tt.withAuth && tt.name != "Invalid JSON" && tt.name != "Unauthorized - no auth cookie" {
 				mockUc.EXPECT().
-					UploadSecret(gomock.Any(), gomock.Any()).
+					UploadSecret(gomock.Any(), gomock.Any(), testUserID).
 					Return(tt.ucResult, tt.ucError)
 			}
 
@@ -69,6 +87,14 @@ func TestUploadHandler_Upload(t *testing.T) {
 				req = httptest.NewRequest(tt.method, "/api/upload", bytes.NewBuffer(tt.body))
 			} else {
 				req = httptest.NewRequest(tt.method, "/api/upload", nil)
+			}
+
+			// Добавляем аутентификацию если нужно
+			if tt.withAuth {
+				req.AddCookie(&http.Cookie{
+					Name:  auth.AuthCookieName,
+					Value: token,
+				})
 			}
 
 			rr := httptest.NewRecorder()

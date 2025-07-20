@@ -82,20 +82,28 @@ type FileData struct {
 }
 
 // UploadSecretIn представляет входные данные для загрузки секрета
-// user_id должен быть получен из авторизации (например, из токена)
+// user id должен быть получен на стороне сервера из access_token
 type UploadSecretIn struct {
-	UserID        string `json:"user_id"` // или uuid.UUID, если нужно
 	Label         string `json:"label"`
 	Type          string `json:"type"`
 	Metadata      string `json:"metadata"`
-	EncryptedData string `json:"encrypted_data"`
+	EncryptedData []byte `json:"encrypted_data"`
 	FileKey       string `json:"file_key"`
-	Version       int    `json:"version"`
 }
 
 type UploadSecretOut struct {
 	ID      string `json:"id"`
 	Version int    `json:"version"`
+}
+
+type GetSecretOut struct {
+	ID            string `json:"id"`
+	Label         string `json:"label"`
+	Type          string `json:"type"`
+	Metadata      string `json:"metadata"`
+	EncryptedData []byte `json:"encrypted_data"`
+	FileKey       string `json:"file_key"`
+	Version       int    `json:"version"`
 }
 
 var ErrConflict = errors.New("conflict: resource already exists")

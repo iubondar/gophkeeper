@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gophkeeper/internal/client/crypto"
+	"gophkeeper/internal/models"
 )
 
 // GetCommand представляет команду получения секрета
@@ -34,9 +35,23 @@ func (c *GetCommand) Execute(ctx context.Context, args any) error {
 		return fmt.Errorf("ошибка при получении секрета: %w", err)
 	}
 
-	// TODO: Здесь можно добавить логику для обработки полученного секрета
+	// Расшифровываем только конфиденциальные данные (поле Data)
+	decryptedData, err := c.crypto.DecryptString(secret.EncryptedData)
+	if err != nil {
+		return fmt.Errorf("ошибка при расшифровке секрета: %w", err)
+	}
+
+	// Собираем полную структуру секрета из открытых и расшифрованных данных
+	secretData := models.SecretData{
+		Name:     secret.Label,
+		Type:     secret.Type,
+		Data:     decryptedData,
+		Metadata: secret.Metadata,
+	}
+
+	// TODO: Здесь можно добавить логику для обработки расшифрованного секрета
 	// Например, сохранить в переменную или передать дальше
-	_ = secret // Пока просто игнорируем, чтобы избежать ошибки компиляции
+	_ = secretData // Пока просто игнорируем, чтобы избежать ошибки компиляции
 
 	return nil
 }

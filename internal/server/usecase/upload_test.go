@@ -20,6 +20,7 @@ func TestUploadSecretUsecase_UploadSecret(t *testing.T) {
 	tests := []struct {
 		name           string
 		in             models.UploadSecretIn
+		userID         uuid.UUID
 		repoError      error
 		expectErr      bool
 		expectConflict bool
@@ -27,38 +28,31 @@ func TestUploadSecretUsecase_UploadSecret(t *testing.T) {
 		{
 			name: "Success",
 			in: models.UploadSecretIn{
-				UserID:        uuid.New().String(),
 				Label:         "label",
 				Type:          "note",
 				Metadata:      "meta",
-				EncryptedData: "data",
+				EncryptedData: []byte("data"),
 				FileKey:       "key",
 			},
-		},
-		{
-			name: "Invalid userID",
-			in: models.UploadSecretIn{
-				UserID: "not-a-uuid",
-			},
-			expectErr: true,
+			userID: uuid.New(),
 		},
 		{
 			name: "Repo error",
 			in: models.UploadSecretIn{
-				UserID: uuid.New().String(),
-				Label:  "label",
-				Type:   "note",
+				Label: "label",
+				Type:  "note",
 			},
+			userID:    uuid.New(),
 			repoError: assert.AnError,
 			expectErr: true,
 		},
 		{
 			name: "Conflict error",
 			in: models.UploadSecretIn{
-				UserID: uuid.New().String(),
-				Label:  "label",
-				Type:   "note",
+				Label: "label",
+				Type:  "note",
 			},
+			userID:         uuid.New(),
 			repoError:      models.ErrConflict,
 			expectErr:      true,
 			expectConflict: true,
@@ -68,14 +62,12 @@ func TestUploadSecretUsecase_UploadSecret(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := mocks.NewMockRecordRepository(ctrl)
-			if tt.in.UserID != "not-a-uuid" {
-				mockRepo.EXPECT().
-					InsertRecord(gomock.Any(), gomock.Any(), gomock.Any(), tt.in.Label, tt.in.Type, tt.in.Metadata, gomock.Any(), tt.in.FileKey, 1, gomock.Any(), gomock.Any()).
-					Return(tt.repoError)
-			}
+			mockRepo.EXPECT().
+				InsertRecord(gomock.Any(), gomock.Any(), tt.userID, tt.in.Label, tt.in.Type, tt.in.Metadata, gomock.Any(), tt.in.FileKey, 1, gomock.Any(), gomock.Any()).
+				Return(tt.repoError)
 
 			uc := usecase.NewUploadSecretUsecase(mockRepo)
-			result, err := uc.UploadSecret(context.Background(), tt.in)
+			result, err := uc.UploadSecret(context.Background(), tt.in, tt.userID)
 			if tt.expectErr {
 				assert.Error(t, err)
 				if tt.expectConflict {
