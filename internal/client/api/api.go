@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"gophkeeper/internal/models"
+	"net/http"
 	"strings"
 
 	"github.com/go-resty/resty/v2"
@@ -53,6 +54,18 @@ func (c *APIClient) handleErrorResponse(response *resty.Response) error {
 		// Если не удалось разобрать JSONError, возвращаем обычную ошибку
 		return errors.New(response.String())
 	}
+	return nil
+}
+
+// setAuthCookie устанавливает cookie аутентификации для запроса
+func (c *APIClient) setAuthCookie(request *resty.Request) error {
+	if c.accessToken == "" {
+		return errors.New("access token is required")
+	}
+	request.SetCookie(&http.Cookie{
+		Name:  "Authorization",
+		Value: c.accessToken,
+	})
 	return nil
 }
 
@@ -116,11 +129,15 @@ func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) 
 
 // UploadSecret загружает секрет на сервер
 func (c *APIClient) UploadSecret(ctx context.Context, in models.UploadSecretIn) error {
-	response, err := c.httpc.R().
+	request := c.httpc.R().
 		SetContext(ctx).
-		SetBody(in).
-		Post("/api/upload")
+		SetBody(in)
 
+	if err := c.setAuthCookie(request); err != nil {
+		return err
+	}
+
+	response, err := request.Post("/api/upload")
 	if err != nil {
 		return err
 	}
