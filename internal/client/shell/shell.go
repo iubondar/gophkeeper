@@ -54,6 +54,9 @@ func (s *Shell) Run() error {
 		case s.menuManager.IsBackCommand(commandName):
 			s.handleBackCommand()
 			continue
+		case commandName == CommandGet || commandName == CommandDelete:
+			s.handleGetDeleteCommand(commandName)
+			continue
 		case s.menuManager.IsActionCommand(commandName):
 			s.handleActionCommand(commandName)
 			continue
@@ -102,26 +105,8 @@ func (s *Shell) executeCommand(commandName string) (any, error) {
 func (s *Shell) executeActionWithType(action, dataType string) (any, error) {
 	ctx := context.Background()
 
-	// Получаем данные в зависимости от типа
 	var data any
 	var err error
-
-	switch dataType {
-	case CommandText:
-		data, err = s.inputHandler.GetTextData()
-	case CommandLoginPassword:
-		data, err = s.inputHandler.GetLoginPasswordData()
-	case CommandCard:
-		data, err = s.inputHandler.GetCardData()
-	case CommandFile:
-		data, err = s.inputHandler.GetFileData()
-	default:
-		return nil, fmt.Errorf("неизвестный тип данных: %s", dataType)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("ошибка получения данных: %w", err)
-	}
 
 	// Для операций get и delete нужен только название секрета
 	if action == CommandGet || action == CommandDelete {
@@ -130,6 +115,24 @@ func (s *Shell) executeActionWithType(action, dataType string) (any, error) {
 			return nil, fmt.Errorf("ошибка получения названия секрета: %w", err)
 		}
 		data = secretName
+	} else {
+		// Для остальных операций получаем данные в зависимости от типа
+		switch dataType {
+		case CommandText:
+			data, err = s.inputHandler.GetTextData()
+		case CommandLoginPassword:
+			data, err = s.inputHandler.GetLoginPasswordData()
+		case CommandCard:
+			data, err = s.inputHandler.GetCardData()
+		case CommandFile:
+			data, err = s.inputHandler.GetFileData()
+		default:
+			return nil, fmt.Errorf("неизвестный тип данных: %s", dataType)
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("ошибка получения данных: %w", err)
+		}
 	}
 
 	// Выполняем команду через реестр команд
@@ -231,5 +234,13 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 		}
 		s.menuManager.ClearActionState()
 		s.menuManager.SwitchToState(MenuStateAuthenticated)
+	}
+}
+
+func (s *Shell) handleGetDeleteCommand(commandName string) {
+	if result, err := s.executeActionWithType(commandName, ""); err != nil {
+		errorMsg(err)
+	} else {
+		s.handleCommandResult(commandName, result)
 	}
 }
