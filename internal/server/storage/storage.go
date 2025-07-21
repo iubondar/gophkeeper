@@ -116,3 +116,20 @@ func (s *Storage) GetRecordByLabel(ctx context.Context, label string, userID uui
 	record.ID = id.String()
 	return &record, nil
 }
+
+// DeleteRecordByLabel удаляет запись по label и userID
+func (s *Storage) DeleteRecordByLabel(ctx context.Context, label string, userID uuid.UUID) error {
+	result, err := s.db.ExecContext(ctx, queries.DeleteRecordByLabel, label, userID)
+	if err != nil {
+		zap.L().Sugar().Debugln("Error deleting record by label:", err.Error())
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return models.ErrRecordNotFound
+	}
+	return nil
+}

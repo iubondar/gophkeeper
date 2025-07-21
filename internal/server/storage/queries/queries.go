@@ -24,4 +24,8 @@ const (
 		FROM records 
 		WHERE label = $1 AND user_id = $2
 	`
+
+	DeleteRecordByLabel = `
+		DELETE FROM records WHERE label = $1 AND user_id = $2
+	`
 )

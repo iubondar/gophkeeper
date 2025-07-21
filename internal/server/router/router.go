@@ -3,7 +3,7 @@
 package router
 
 import (
-	handlers "gophkeeper/internal/server/api"
+	"gophkeeper/internal/server/api"
 	"gophkeeper/internal/server/compress"
 	"gophkeeper/internal/server/storage"
 	"gophkeeper/internal/server/usecase"
@@ -17,14 +17,15 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 	router := chi.NewRouter()
 	router.Use(compress.WithGzipCompression)
 
-	healthHandler := handlers.NewHealthHandler(storage)
+	healthHandler := api.NewHealthHandler(storage)
 	router.Get("/health", healthHandler.Health)
 
-	registerHandler := handlers.NewRegisterHandler(usecase.NewRegisterUsecase(storage))
-	loginHandler := handlers.NewLoginHandler(usecase.NewLoginUsecase(storage))
-	authenticateHandler := handlers.NewAuthenticateHandler(usecase.NewAuthenticateUsecase(storage))
-	uploadHandler := handlers.NewUploadHandler(usecase.NewUploadSecretUsecase(storage))
-	getHandler := handlers.NewGetHandler(usecase.NewGetSecretUsecase(storage))
+	registerHandler := api.NewRegisterHandler(usecase.NewRegisterUsecase(storage))
+	loginHandler := api.NewLoginHandler(usecase.NewLoginUsecase(storage))
+	authenticateHandler := api.NewAuthenticateHandler(usecase.NewAuthenticateUsecase(storage))
+	uploadHandler := api.NewUploadHandler(usecase.NewUploadSecretUsecase(storage))
+	getHandler := api.NewGetHandler(usecase.NewGetSecretUsecase(storage))
+	deleteHandler := api.NewDeleteHandler(usecase.NewDeleteSecretUsecase(storage))
 
 	// API маршруты
 	router.Route("/api", func(r chi.Router) {
@@ -34,6 +35,7 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 		r.Post("/refresh", handleRefresh)
 		r.Post("/upload", uploadHandler.Upload)
 		r.Get("/get", getHandler.GetSecret)
+		r.Delete("/delete", deleteHandler.DeleteSecret)
 
 		r.Post("/files", handleCreateFile)
 		r.Put("/records/{label}", handleUpdateRecord)

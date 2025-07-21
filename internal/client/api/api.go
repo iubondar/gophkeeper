@@ -187,7 +187,22 @@ func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.G
 
 // DeleteSecret удаляет секрет с сервера
 func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
-	// TODO: Implement
+	request := c.httpc.R().
+		SetContext(ctx).
+		SetQueryParam("name", secretName)
+
+	if err := c.setAuthCookie(request); err != nil {
+		return err
+	}
+
+	response, err := request.Delete("/api/delete")
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -273,3 +273,33 @@ func (s *StorageTestSuite) TestGetRecordByLabel() {
 		s.Require().Nil(result)
 	})
 }
+
+func (s *StorageTestSuite) TestDeleteRecordByLabel() {
+	ctx := context.Background()
+	userID := uuid.New()
+	label := "delete-label"
+	login := "testuser"
+	passwordHash := "hash"
+	salt := "salt"
+	_, err := s.storage.Register(ctx, userID, login, passwordHash, salt)
+	s.Require().NoError(err)
+
+	recordID := uuid.New()
+	err = s.storage.InsertRecord(ctx, recordID, userID, label, "note", "meta", []byte("data"), "key", 1, time.Now(), time.Now())
+	s.Require().NoError(err)
+
+	s.Run("successful delete", func() {
+		err := s.storage.DeleteRecordByLabel(ctx, label, userID)
+		s.Require().NoError(err)
+		// Повторное удаление должно вернуть ErrRecordNotFound
+		err = s.storage.DeleteRecordByLabel(ctx, label, userID)
+		s.Require().Error(err)
+		s.Require().Equal(models.ErrRecordNotFound, err)
+	})
+
+	s.Run("not found", func() {
+		err := s.storage.DeleteRecordByLabel(ctx, "non-existent", userID)
+		s.Require().Error(err)
+		s.Require().Equal(models.ErrRecordNotFound, err)
+	})
+}
