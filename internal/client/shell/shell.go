@@ -93,7 +93,7 @@ func (s *Shell) executeCommand(commandName string) (any, error) {
 		data = *credentials
 
 	case CommandLogin:
-		credentials, err := s.inputHandler.GetLoginCredentials()
+		credentials, err := s.inputHandler.GetUserCredentials()
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}

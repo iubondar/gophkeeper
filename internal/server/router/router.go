@@ -36,7 +36,6 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 		r.Get("/get", getHandler.GetSecret)
 
 		r.Post("/files", handleCreateFile)
-		r.Get("/records/{label}", handleGetRecord)
 		r.Put("/records/{label}", handleUpdateRecord)
 		r.Get("/files/{label}/download", handleDownloadFile)
 	})
@@ -54,12 +53,6 @@ func handleCreateFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"id": "test-id", "version": 1}`))
-}
-
-func handleGetRecord(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"id": "test-id", "type": "password", "label": "test", "metadata": "test", "data": "test", "version": 1}`))
 }
 
 func handleUpdateRecord(w http.ResponseWriter, r *http.Request) {

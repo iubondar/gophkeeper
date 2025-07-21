@@ -12,7 +12,6 @@ import (
 
 const secretKey = "supersecretkey"
 const AuthCookieName = "Authorization"
-const UserIDKey = "userID"
 
 func GenerateAccessToken(userID string) (string, error) {
 	return generateToken(userID, 15*time.Minute)
