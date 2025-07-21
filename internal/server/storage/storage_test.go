@@ -303,3 +303,68 @@ func (s *StorageTestSuite) TestDeleteRecordByLabel() {
 		s.Require().Equal(models.ErrRecordNotFound, err)
 	})
 }
+
+func (s *StorageTestSuite) TestUpdateRecordByLabel() {
+	ctx := context.Background()
+	userID := uuid.New()
+	login := "testuser"
+	passwordHash := "hash"
+	salt := "salt"
+	_, err := s.storage.Register(ctx, userID, login, passwordHash, salt)
+	s.Require().NoError(err)
+
+	recordID := uuid.New()
+	label := "update-label"
+	recordType := models.SecretTypeText
+	metadata := "meta1"
+	encryptedData := []byte("data1")
+	fileKey := "key1"
+	version := 1
+	createdAt := time.Now()
+	updatedAt := time.Now()
+
+	err = s.storage.InsertRecord(ctx, recordID, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+	s.Require().NoError(err)
+
+	s.Run("successful update", func() {
+		newType := models.SecretTypeText
+		newMetadata := "meta2"
+		newEncryptedData := []byte("data2")
+		newFileKey := "key2"
+		newUpdatedAt := time.Now()
+		newVersion, err := s.storage.UpdateRecordByLabel(ctx, label, userID, newType, newMetadata, newEncryptedData, newFileKey, version, newUpdatedAt)
+		s.Require().NoError(err)
+		s.Require().Equal(version+1, newVersion)
+
+		// Проверяем, что данные обновились
+		record, err := s.storage.GetRecordByLabel(ctx, label, userID)
+		s.Require().NoError(err)
+		s.Require().Equal(newMetadata, record.Metadata)
+		s.Require().Equal(newEncryptedData, record.EncryptedData)
+		s.Require().Equal(newFileKey, record.FileKey)
+		s.Require().Equal(newVersion, record.Version)
+	})
+
+	s.Run("version conflict", func() {
+		wrongVersion := 1 // Уже обновили до 2
+		_, err := s.storage.UpdateRecordByLabel(ctx, label, userID, recordType, metadata, encryptedData, fileKey, wrongVersion, time.Now())
+		s.Require().Error(err)
+		s.Require().Equal(models.ErrConflict, err)
+	})
+
+	s.Run("record not found", func() {
+		nonExistentLabel := "no-such-label"
+		_, err := s.storage.UpdateRecordByLabel(ctx, nonExistentLabel, userID, recordType, metadata, encryptedData, fileKey, 1, time.Now())
+		s.Require().Error(err)
+		s.Require().Equal(models.ErrConflict, err)
+	})
+
+	s.Run("update by wrong user", func() {
+		otherUserID := uuid.New()
+		_, err := s.storage.Register(ctx, otherUserID, "otheruser", passwordHash, salt)
+		s.Require().NoError(err)
+		_, err = s.storage.UpdateRecordByLabel(ctx, label, otherUserID, recordType, metadata, encryptedData, fileKey, 2, time.Now())
+		s.Require().Error(err)
+		s.Require().Equal(models.ErrConflict, err)
+	})
+}

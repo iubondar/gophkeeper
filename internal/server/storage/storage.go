@@ -133,3 +133,32 @@ func (s *Storage) DeleteRecordByLabel(ctx context.Context, label string, userID 
 	}
 	return nil
 }
+
+// UpdateRecordByLabel обновляет запись с проверкой версии (OCC)
+func (s *Storage) UpdateRecordByLabel(ctx context.Context, label string, userID uuid.UUID, recordType, metadata string, encryptedData []byte, fileKey string, expectedVersion int, updatedAt time.Time) (int, error) {
+	result, err := s.db.ExecContext(
+		ctx,
+		queries.UpdateRecordByLabelAndVersion,
+		recordType,
+		metadata,
+		encryptedData,
+		fileKey,
+		updatedAt,
+		label,
+		userID,
+		expectedVersion,
+	)
+	if err != nil {
+		zap.L().Sugar().Debugln("Error updating record by label:", err.Error())
+		return 0, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	if rowsAffected == 0 {
+		return 0, models.ErrConflict // версия не совпала
+	}
+	// Получаем новую версию (expectedVersion + 1)
+	return expectedVersion + 1, nil
+}

@@ -28,4 +28,11 @@ const (
 	DeleteRecordByLabel = `
 		DELETE FROM records WHERE label = $1 AND user_id = $2
 	`
+
+	// Обновление записи с проверкой версии (OCC)
+	UpdateRecordByLabelAndVersion = `
+	    UPDATE records
+	    SET type = $1, metadata = $2, encrypted_data = $3, file_key = $4, version = version + 1, updated_at = $5
+	    WHERE label = $6 AND user_id = $7 AND version = $8
+	`
 )

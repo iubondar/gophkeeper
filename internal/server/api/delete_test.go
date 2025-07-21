@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 
 	"github.com/google/uuid"
@@ -90,8 +91,12 @@ func TestDeleteHandler_DeleteSecret(t *testing.T) {
 }
 
 func addUserIDCookie(req *http.Request, userID uuid.UUID) {
+	token, err := auth.GenerateAccessToken(userID.String())
+	if err != nil {
+		panic(err)
+	}
 	req.AddCookie(&http.Cookie{
-		Name:  "auth_token",
-		Value: userID.String(),
+		Name:  auth.AuthCookieName,
+		Value: token,
 	})
 }
