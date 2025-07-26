@@ -7,6 +7,7 @@ import (
 	"gophkeeper/internal/config"
 	"gophkeeper/internal/server"
 	"gophkeeper/internal/server/router"
+	"gophkeeper/internal/server/storage/file"
 	"gophkeeper/internal/server/storage/pg"
 
 	"go.uber.org/zap"
@@ -22,12 +23,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	storage, err := pg.NewStorage(config.DatabaseURI)
+	storage, err := pg.NewStorage(config.GetDatabaseURI())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	router, err := router.NewRouter(storage)
+	// Создаем file storage
+	fileStorage, err := file.NewStorage(&config.MinioConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	router, err := router.NewRouter(storage, fileStorage)
 	if err != nil {
 		log.Fatal(err)
 	}

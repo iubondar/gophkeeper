@@ -1,39 +1,42 @@
 package config
 
 import (
-	"flag"
+	"fmt"
 
 	"github.com/caarlos0/env"
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
-type Config struct {
-	RunAddress  string `env:"RUN_ADDRESS"`
-	DatabaseURI string `env:"DATABASE_URI"`
+type MinioConfig struct {
+	Endpoint        string `env:"MINIO_ENDPOINT"`
+	AccessKeyID     string `env:"MINIO_ACCESS_KEY"`
+	SecretAccessKey string `env:"MINIO_SECRET_KEY"`
+	UseSSL          bool   `env:"MINIO_USE_SSL"`
 }
 
-// для локальной разработки
-const (
-	defaultRunAddress  = "localhost:8080"
-	defaultDatabaseURI = "host=localhost user=ibondar password=password dbname=gophkeeper sslmode=disable"
-)
+type DatabaseConfig struct {
+	URI      string `env:"DATABASE_URI"`
+	User     string `env:"DATABASE_USER"`
+	Password string `env:"DATABASE_PASSWORD"`
+	Host     string `env:"DATABASE_HOST"`
+	DBName   string `env:"DATABASE_NAME"`
+	SSLMode  string `env:"DATABASE_SSL_MODE"`
+}
+
+type Config struct {
+	RunAddress     string
+	DatabaseConfig DatabaseConfig
+	MinioConfig    MinioConfig
+}
 
 func NewConfig(progname string, args []string) (*Config, error) {
-	var c Config
-
-	// https://eli.thegreenplace.net/2020/testing-flag-parsing-in-go-programs/
-	// Загружаем значения из переданных аргументов командной строки
-	flags := flag.NewFlagSet(progname, flag.ContinueOnError)
-
-	flags.StringVar(&c.RunAddress, "a", defaultRunAddress, "address to run server")
-	flags.StringVar(&c.DatabaseURI, "d", defaultDatabaseURI, "database dsn")
-
-	err := flags.Parse(args)
+	err := godotenv.Load()
 	if err != nil {
 		return nil, err
 	}
 
-	// Переписываем значения из переменных окружения
+	var c Config
 	err = env.Parse(&c)
 	if err != nil {
 		return nil, err
@@ -42,8 +45,27 @@ func NewConfig(progname string, args []string) (*Config, error) {
 	zap.L().Sugar().Debugln(
 		"Config: ",
 		"RunAddress", c.RunAddress,
-		"DatabaseURI", c.DatabaseURI,
+		"DatabaseURI", c.DatabaseConfig.URI,
+		"DatabaseUser", c.DatabaseConfig.User,
+		"DatabasePassword", c.DatabaseConfig.Password,
+		"DatabaseHost", c.DatabaseConfig.Host,
+		"DatabaseName", c.DatabaseConfig.DBName,
+		"DatabaseSSLMode", c.DatabaseConfig.SSLMode,
+		"MinioEndpoint", c.MinioConfig.Endpoint,
+		"MinioAccessKeyID", c.MinioConfig.AccessKeyID,
+		"MinioSecretAccessKey", c.MinioConfig.SecretAccessKey,
+		"MinioUseSSL", c.MinioConfig.UseSSL,
 	)
 
 	return &c, nil
+}
+
+func (c *Config) GetDatabaseURI() string {
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=%s",
+		c.DatabaseConfig.Host,
+		c.DatabaseConfig.User,
+		c.DatabaseConfig.Password,
+		c.DatabaseConfig.DBName,
+		c.DatabaseConfig.SSLMode,
+	)
 }
