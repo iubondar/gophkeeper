@@ -4,6 +4,7 @@ import (
 	"context"
 )
 
+// HealthAPIClient интерфейс для проверки доступности сервера
 type HealthAPIClient interface {
 	HealthCheck(ctx context.Context) error
 }

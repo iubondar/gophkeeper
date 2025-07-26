@@ -15,14 +15,18 @@ type GetSecretResult struct {
 	Metadata string      `json:"metadata"`
 }
 
+type GetAPIClient interface {
+	GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error)
+}
+
 // GetCommand представляет команду получения секрета
 type GetCommand struct {
-	apiClient GophKeeperClient
+	apiClient GetAPIClient
 	crypto    *crypto.Crypto
 }
 
 // NewGetCommand создает новую команду получения
-func NewGetCommand(apiClient GophKeeperClient, crypto *crypto.Crypto) *GetCommand {
+func NewGetCommand(apiClient GetAPIClient, crypto *crypto.Crypto) *GetCommand {
 	return &GetCommand{
 		apiClient: apiClient,
 		crypto:    crypto,

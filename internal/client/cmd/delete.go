@@ -6,14 +6,18 @@ import (
 	"gophkeeper/internal/client/crypto"
 )
 
+type DeleteAPIClient interface {
+	DeleteSecret(ctx context.Context, secretName string) error
+}
+
 // DeleteCommand представляет команду удаления секрета
 type DeleteCommand struct {
-	apiClient GophKeeperClient
+	apiClient DeleteAPIClient
 	crypto    *crypto.Crypto
 }
 
 // NewDeleteCommand создает новую команду удаления
-func NewDeleteCommand(apiClient GophKeeperClient, crypto *crypto.Crypto) *DeleteCommand {
+func NewDeleteCommand(apiClient DeleteAPIClient, crypto *crypto.Crypto) *DeleteCommand {
 	return &DeleteCommand{
 		apiClient: apiClient,
 		crypto:    crypto,

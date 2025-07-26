@@ -8,14 +8,19 @@ import (
 	"gophkeeper/internal/models"
 )
 
+// UploadAPIClient интерфейс для загрузки секрета
+type UploadAPIClient interface {
+	UploadSecret(ctx context.Context, in models.UploadSecretIn) error
+}
+
 // UploadCommand представляет команду загрузки секрета
 type UploadCommand struct {
-	apiClient GophKeeperClient
+	apiClient UploadAPIClient
 	crypto    *crypto.Crypto
 }
 
 // NewUploadCommand создает новую команду загрузки
-func NewUploadCommand(apiClient GophKeeperClient, crypto *crypto.Crypto) *UploadCommand {
+func NewUploadCommand(apiClient UploadAPIClient, crypto *crypto.Crypto) *UploadCommand {
 	return &UploadCommand{
 		apiClient: apiClient,
 		crypto:    crypto,

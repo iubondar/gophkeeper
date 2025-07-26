@@ -24,11 +24,23 @@ func main() {
 
 	apiClient := api.NewAPIClient(config.RunAddress)
 	crypto := crypto.NewCrypto()
-	commandRegistry := cmd.NewCommandRegistry(apiClient, crypto)
+	commandRegistry := makeCommandRegistry(apiClient, crypto)
 
 	// Создаем и запускаем интерактивный интерфейс
 	shell := shell.NewShell(commandRegistry)
 	if err := shell.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func makeCommandRegistry(apiClient *api.APIClient, crypto *crypto.Crypto) *cmd.CommandRegistry {
+	registry := cmd.NewCommandRegistry(crypto)
+	registry.RegisterCommand(cmd.NewRegisterCommand(apiClient, crypto))
+	registry.RegisterCommand(cmd.NewLoginCommand(apiClient, crypto))
+	registry.RegisterCommand(cmd.NewUploadCommand(apiClient, crypto))
+	registry.RegisterCommand(cmd.NewUpdateCommand(apiClient, crypto))
+	registry.RegisterCommand(cmd.NewGetCommand(apiClient, crypto))
+	registry.RegisterCommand(cmd.NewDeleteCommand(apiClient, crypto))
+	registry.RegisterCommand(cmd.NewHealthCommand(apiClient))
+	return registry
 }

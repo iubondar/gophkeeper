@@ -8,14 +8,18 @@ import (
 	"gophkeeper/internal/models"
 )
 
+type UpdateAPIClient interface {
+	UpdateSecret(ctx context.Context, secret models.SecretData) error
+}
+
 // UpdateCommand представляет команду обновления секрета
 type UpdateCommand struct {
-	apiClient GophKeeperClient
+	apiClient UpdateAPIClient
 	crypto    *crypto.Crypto
 }
 
 // NewUpdateCommand создает новую команду обновления
-func NewUpdateCommand(apiClient GophKeeperClient, crypto *crypto.Crypto) *UpdateCommand {
+func NewUpdateCommand(apiClient UpdateAPIClient, crypto *crypto.Crypto) *UpdateCommand {
 	return &UpdateCommand{
 		apiClient: apiClient,
 		crypto:    crypto,

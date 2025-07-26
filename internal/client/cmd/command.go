@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"gophkeeper/internal/client/crypto"
-	"gophkeeper/internal/models"
 )
 
 // Command представляет универсальный интерфейс для всех команд
@@ -17,42 +16,22 @@ type Command interface {
 	GetDescription() string
 }
 
-// GophKeeperClient это интерфейс для работы с API сервера, который предоставляет все API методы
-type GophKeeperClient interface {
-	Register(ctx context.Context, in models.RegisterIn) error
-	Login(ctx context.Context, in models.LoginIn) (salt string, err error)
-	Authenticate(ctx context.Context, in models.AuthenticateIn) error
-	UploadSecret(ctx context.Context, in models.UploadSecretIn) error
-	UpdateSecret(ctx context.Context, secret models.SecretData) error
-	GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error)
-	DeleteSecret(ctx context.Context, secretName string) error
-	HealthCheck(ctx context.Context) error
-}
-
 // CommandRegistry управляет реестром команд
 type CommandRegistry struct {
 	commands map[string]Command
 }
 
 // NewCommandRegistry создает новый реестр команд
-func NewCommandRegistry(apiClient GophKeeperClient, crypto *crypto.Crypto) *CommandRegistry {
+func NewCommandRegistry(crypto *crypto.Crypto) *CommandRegistry {
 	registry := CommandRegistry{
 		commands: make(map[string]Command),
 	}
-
-	registry.registerCommand(NewRegisterCommand(apiClient, crypto))
-	registry.registerCommand(NewLoginCommand(apiClient, crypto))
-	registry.registerCommand(NewUploadCommand(apiClient, crypto))
-	registry.registerCommand(NewUpdateCommand(apiClient, crypto))
-	registry.registerCommand(NewGetCommand(apiClient, crypto))
-	registry.registerCommand(NewDeleteCommand(apiClient, crypto))
-	registry.registerCommand(NewHealthCommand(apiClient))
 
 	return &registry
 }
 
 // RegisterCommand регистрирует команду в реестре
-func (r *CommandRegistry) registerCommand(cmd Command) {
+func (r *CommandRegistry) RegisterCommand(cmd Command) {
 	r.commands[cmd.GetName()] = cmd
 }
 
