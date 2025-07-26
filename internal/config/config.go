@@ -8,26 +8,18 @@ import (
 	"go.uber.org/zap"
 )
 
-type MinioConfig struct {
-	Endpoint        string `env:"MINIO_ENDPOINT"`
-	AccessKeyID     string `env:"MINIO_ACCESS_KEY"`
-	SecretAccessKey string `env:"MINIO_SECRET_KEY"`
-	UseSSL          bool   `env:"MINIO_USE_SSL"`
-}
-
-type DatabaseConfig struct {
-	URI      string `env:"DATABASE_URI"`
-	User     string `env:"DATABASE_USER"`
-	Password string `env:"DATABASE_PASSWORD"`
-	Host     string `env:"DATABASE_HOST"`
-	DBName   string `env:"DATABASE_NAME"`
-	SSLMode  string `env:"DATABASE_SSL_MODE"`
-}
-
 type Config struct {
-	RunAddress     string
-	DatabaseConfig DatabaseConfig
-	MinioConfig    MinioConfig
+	RunAddress       string `env:"RUN_ADDRESS"`
+	DatabaseURI      string `env:"DATABASE_URI"`
+	DatabaseUser     string `env:"DATABASE_USER"`
+	DatabasePassword string `env:"DATABASE_PASSWORD"`
+	DatabaseHost     string `env:"DATABASE_HOST"`
+	DatabaseName     string `env:"DATABASE_NAME"`
+	DatabaseSSLMode  string `env:"DATABASE_SSL_MODE"`
+	MinioEndpoint    string `env:"MINIO_ENDPOINT"`
+	MinioAccessKey   string `env:"MINIO_ACCESS_KEY"`
+	MinioSecretKey   string `env:"MINIO_SECRET_KEY"`
+	MinioUseSSL      bool   `env:"MINIO_USE_SSL"`
 }
 
 func NewConfig(progname string, args []string) (*Config, error) {
@@ -45,16 +37,16 @@ func NewConfig(progname string, args []string) (*Config, error) {
 	zap.L().Sugar().Debugln(
 		"Config: ",
 		"RunAddress", c.RunAddress,
-		"DatabaseURI", c.DatabaseConfig.URI,
-		"DatabaseUser", c.DatabaseConfig.User,
-		"DatabasePassword", c.DatabaseConfig.Password,
-		"DatabaseHost", c.DatabaseConfig.Host,
-		"DatabaseName", c.DatabaseConfig.DBName,
-		"DatabaseSSLMode", c.DatabaseConfig.SSLMode,
-		"MinioEndpoint", c.MinioConfig.Endpoint,
-		"MinioAccessKeyID", c.MinioConfig.AccessKeyID,
-		"MinioSecretAccessKey", c.MinioConfig.SecretAccessKey,
-		"MinioUseSSL", c.MinioConfig.UseSSL,
+		"DatabaseURI", c.DatabaseURI,
+		"DatabaseUser", c.DatabaseUser,
+		"DatabasePassword", c.DatabasePassword,
+		"DatabaseHost", c.DatabaseHost,
+		"DatabaseName", c.DatabaseName,
+		"DatabaseSSLMode", c.DatabaseSSLMode,
+		"MinioEndpoint", c.MinioEndpoint,
+		"MinioAccessKey", c.MinioAccessKey,
+		"MinioSecretKey", c.MinioSecretKey,
+		"MinioUseSSL", c.MinioUseSSL,
 	)
 
 	return &c, nil
@@ -62,10 +54,10 @@ func NewConfig(progname string, args []string) (*Config, error) {
 
 func (c *Config) GetDatabaseURI() string {
 	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=%s",
-		c.DatabaseConfig.Host,
-		c.DatabaseConfig.User,
-		c.DatabaseConfig.Password,
-		c.DatabaseConfig.DBName,
-		c.DatabaseConfig.SSLMode,
+		c.DatabaseHost,
+		c.DatabaseUser,
+		c.DatabasePassword,
+		c.DatabaseName,
+		c.DatabaseSSLMode,
 	)
 }

@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// Создаем file storage
-	fileStorage, err := file.NewStorage(&config.MinioConfig)
+	fileStorage, err := file.NewStorage(config)
 	if err != nil {
 		log.Fatal(err)
 	}
