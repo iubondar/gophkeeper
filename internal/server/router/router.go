@@ -5,15 +5,16 @@ package router
 import (
 	"gophkeeper/internal/server/api"
 	"gophkeeper/internal/server/compress"
-	"gophkeeper/internal/server/storage"
 	"gophkeeper/internal/server/usecase"
 	"net/http"
+
+	"gophkeeper/internal/server/storage/pg"
 
 	"github.com/go-chi/chi"
 )
 
 // Возвращает настроенный маршрутизатор и ошибку, если она возникла.
-func NewRouter(storage *storage.Storage) (chi.Router, error) {
+func NewRouter(storage *pg.Storage) (chi.Router, error) {
 	router := chi.NewRouter()
 	router.Use(compress.WithGzipCompression)
 

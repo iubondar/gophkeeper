@@ -7,7 +7,7 @@ import (
 	"gophkeeper/internal/config"
 	"gophkeeper/internal/server"
 	"gophkeeper/internal/server/router"
-	"gophkeeper/internal/server/storage"
+	"gophkeeper/internal/server/storage/pg"
 
 	"go.uber.org/zap"
 )
@@ -22,7 +22,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	storage, err := storage.NewStorage(config.DatabaseURI)
+	storage, err := pg.NewStorage(config.DatabaseURI)
 	if err != nil {
 		log.Fatal(err)
 	}
