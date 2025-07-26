@@ -10,9 +10,9 @@ import (
 
 // GetSecretResult представляет результат выполнения команды get
 type GetSecretResult struct {
-	Type     string      `json:"type"`
-	Data     interface{} `json:"data"`
-	Metadata string      `json:"metadata"`
+	Type     string `json:"type"`
+	Data     any    `json:"data"`
+	Metadata string `json:"metadata"`
 }
 
 type GetAPIClient interface {
@@ -55,48 +55,16 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Обрабатываем секрет в зависимости от его типа
 	switch secret.Type {
 	case models.SecretTypeText:
-		var textSecret models.TextSecretData
-		if err := json.Unmarshal([]byte(decryptedData), &textSecret); err != nil {
-			return nil, fmt.Errorf("ошибка при разборе текстового секрета: %w", err)
-		}
-		return &GetSecretResult{
-			Type:     models.SecretTypeText,
-			Data:     &textSecret,
-			Metadata: secret.Metadata,
-		}, nil
+		return handleTextSecret(decryptedData, secret.Metadata)
 
 	case models.SecretTypeLoginPassword:
-		var loginPassword models.LoginPasswordData
-		if err := json.Unmarshal([]byte(decryptedData), &loginPassword); err != nil {
-			return nil, fmt.Errorf("ошибка при разборе секрета логин/пароль: %w", err)
-		}
-		return &GetSecretResult{
-			Type:     models.SecretTypeLoginPassword,
-			Data:     &loginPassword,
-			Metadata: secret.Metadata,
-		}, nil
+		return handleLoginPasswordSecret(decryptedData, secret.Metadata)
 
 	case models.SecretTypeCard:
-		var cardData models.CardData
-		if err := json.Unmarshal([]byte(decryptedData), &cardData); err != nil {
-			return nil, fmt.Errorf("ошибка при разборе данных карты: %w", err)
-		}
-		return &GetSecretResult{
-			Type:     models.SecretTypeCard,
-			Data:     &cardData,
-			Metadata: secret.Metadata,
-		}, nil
+		return handleCardSecret(decryptedData, secret.Metadata)
 
 	case models.SecretTypeFile:
-		var fileData models.FileData
-		if err := json.Unmarshal([]byte(decryptedData), &fileData); err != nil {
-			return nil, fmt.Errorf("ошибка при разборе данных файла: %w", err)
-		}
-		return &GetSecretResult{
-			Type:     models.SecretTypeFile,
-			Data:     &fileData,
-			Metadata: secret.Metadata,
-		}, nil
+		return handleFileSecret(decryptedData, secret.Metadata)
 	default:
 		return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 	}
@@ -110,4 +78,54 @@ func (c *GetCommand) GetName() string {
 // GetDescription возвращает описание команды
 func (c *GetCommand) GetDescription() string {
 	return "Получить секрет с сервера"
+}
+
+// Вынесенные приватные функции для обработки каждого типа секрета
+
+func handleTextSecret(decryptedData string, metadata string) (*GetSecretResult, error) {
+	var textSecret models.TextSecretData
+	if err := json.Unmarshal([]byte(decryptedData), &textSecret); err != nil {
+		return nil, fmt.Errorf("ошибка при разборе текстового секрета: %w", err)
+	}
+	return &GetSecretResult{
+		Type:     models.SecretTypeText,
+		Data:     &textSecret,
+		Metadata: metadata,
+	}, nil
+}
+
+func handleLoginPasswordSecret(decryptedData string, metadata string) (*GetSecretResult, error) {
+	var loginPassword models.LoginPasswordData
+	if err := json.Unmarshal([]byte(decryptedData), &loginPassword); err != nil {
+		return nil, fmt.Errorf("ошибка при разборе секрета логин/пароль: %w", err)
+	}
+	return &GetSecretResult{
+		Type:     models.SecretTypeLoginPassword,
+		Data:     &loginPassword,
+		Metadata: metadata,
+	}, nil
+}
+
+func handleCardSecret(decryptedData string, metadata string) (*GetSecretResult, error) {
+	var cardData models.CardData
+	if err := json.Unmarshal([]byte(decryptedData), &cardData); err != nil {
+		return nil, fmt.Errorf("ошибка при разборе данных карты: %w", err)
+	}
+	return &GetSecretResult{
+		Type:     models.SecretTypeCard,
+		Data:     &cardData,
+		Metadata: metadata,
+	}, nil
+}
+
+func handleFileSecret(decryptedData string, metadata string) (*GetSecretResult, error) {
+	var fileData models.FileData
+	if err := json.Unmarshal([]byte(decryptedData), &fileData); err != nil {
+		return nil, fmt.Errorf("ошибка при разборе данных файла: %w", err)
+	}
+	return &GetSecretResult{
+		Type:     models.SecretTypeFile,
+		Data:     &fileData,
+		Metadata: metadata,
+	}, nil
 }

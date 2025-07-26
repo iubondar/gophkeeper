@@ -8,6 +8,7 @@ import (
 	"gophkeeper/internal/models"
 )
 
+// UpdateAPIClient интерфейс для обновления секрета
 type UpdateAPIClient interface {
 	UpdateSecret(ctx context.Context, secret models.SecretData) error
 }
