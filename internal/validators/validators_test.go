@@ -1,7 +1,9 @@
-package models
+package validators
 
 import (
 	"testing"
+
+	"gophkeeper/internal/models"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -9,13 +11,13 @@ import (
 func TestValidateUserCredentials(t *testing.T) {
 	tests := []struct {
 		name        string
-		credentials *UserCredentials
+		credentials *models.UserCredentials
 		wantOk      bool
 		wantErr     bool
 	}{
 		{
 			name: "valid credentials",
-			credentials: &UserCredentials{
+			credentials: &models.UserCredentials{
 				Login:    "testuser",
 				Password: "testpass",
 			},
@@ -30,7 +32,7 @@ func TestValidateUserCredentials(t *testing.T) {
 		},
 		{
 			name: "empty login",
-			credentials: &UserCredentials{
+			credentials: &models.UserCredentials{
 				Login:    "",
 				Password: "testpass",
 			},
@@ -39,7 +41,7 @@ func TestValidateUserCredentials(t *testing.T) {
 		},
 		{
 			name: "empty password",
-			credentials: &UserCredentials{
+			credentials: &models.UserCredentials{
 				Login:    "testuser",
 				Password: "",
 			},
@@ -65,13 +67,13 @@ func TestValidateUserCredentials(t *testing.T) {
 func TestValidateTextSecretData(t *testing.T) {
 	tests := []struct {
 		name    string
-		data    *TextSecretData
+		data    *models.TextSecretData
 		wantOk  bool
 		wantErr bool
 	}{
 		{
 			name: "valid data",
-			data: &TextSecretData{
+			data: &models.TextSecretData{
 				Name: "test secret",
 				Text: "secret text",
 			},
@@ -86,7 +88,7 @@ func TestValidateTextSecretData(t *testing.T) {
 		},
 		{
 			name: "empty name",
-			data: &TextSecretData{
+			data: &models.TextSecretData{
 				Name: "",
 				Text: "secret text",
 			},
@@ -95,7 +97,7 @@ func TestValidateTextSecretData(t *testing.T) {
 		},
 		{
 			name: "empty text",
-			data: &TextSecretData{
+			data: &models.TextSecretData{
 				Name: "test secret",
 				Text: "",
 			},
@@ -127,13 +129,19 @@ func TestValidateSecretName(t *testing.T) {
 	}{
 		{
 			name:       "valid name",
-			secretName: "test secret",
+			secretName: "testsecret",
 			wantOk:     true,
 			wantErr:    false,
 		},
 		{
 			name:       "empty name",
 			secretName: "",
+			wantOk:     false,
+			wantErr:    true,
+		},
+		{
+			name:       "invalid name with space",
+			secretName: "test secret",
 			wantOk:     false,
 			wantErr:    true,
 		},
@@ -156,13 +164,13 @@ func TestValidateSecretName(t *testing.T) {
 func TestValidateCardData(t *testing.T) {
 	tests := []struct {
 		name    string
-		data    *CardData
+		data    *models.CardData
 		wantOk  bool
 		wantErr bool
 	}{
 		{
 			name: "valid card",
-			data: &CardData{
+			data: &models.CardData{
 				Name:   "test card",
 				Number: "4003600000000014",
 				Holder: "John Doe",
@@ -180,7 +188,7 @@ func TestValidateCardData(t *testing.T) {
 		},
 		{
 			name: "empty number",
-			data: &CardData{
+			data: &models.CardData{
 				Name:   "test card",
 				Number: "",
 				Holder: "John Doe",
@@ -192,7 +200,7 @@ func TestValidateCardData(t *testing.T) {
 		},
 		{
 			name: "number not 16 digits",
-			data: &CardData{
+			data: &models.CardData{
 				Name:   "test card",
 				Number: "12345678",
 				Holder: "John Doe",
@@ -204,7 +212,7 @@ func TestValidateCardData(t *testing.T) {
 		},
 		{
 			name: "number not only digits",
-			data: &CardData{
+			data: &models.CardData{
 				Name:   "test card",
 				Number: "1234abcd12345678",
 				Holder: "John Doe",
@@ -216,7 +224,7 @@ func TestValidateCardData(t *testing.T) {
 		},
 		{
 			name: "invalid expiry format",
-			data: &CardData{
+			data: &models.CardData{
 				Name:   "test card",
 				Number: "4003600000000014",
 				Holder: "John Doe",
@@ -228,7 +236,7 @@ func TestValidateCardData(t *testing.T) {
 		},
 		{
 			name: "invalid expiry month",
-			data: &CardData{
+			data: &models.CardData{
 				Name:   "test card",
 				Number: "4003600000000014",
 				Holder: "John Doe",
@@ -240,7 +248,7 @@ func TestValidateCardData(t *testing.T) {
 		},
 		{
 			name: "CVV not only digits",
-			data: &CardData{
+			data: &models.CardData{
 				Name:   "test card",
 				Number: "4003600000000014",
 				Holder: "John Doe",
@@ -252,7 +260,7 @@ func TestValidateCardData(t *testing.T) {
 		},
 		{
 			name: "CVV wrong length",
-			data: &CardData{
+			data: &models.CardData{
 				Name:   "test card",
 				Number: "4003600000000014",
 				Holder: "John Doe",
@@ -278,61 +286,8 @@ func TestValidateCardData(t *testing.T) {
 	}
 }
 
-func TestValidateLuhn(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected bool
-	}{
-		{"Valid card number", "4003600000000014", true},
-		{"Invalid card number", "4111111111111112", false},
-		{"Empty string", "", false},
-		{"Non-digit characters", "4111-1111-1111-1111", false},
-		{"Single digit", "5", false},
-		{"Single digit positive", "0", true},
-		{"Two digits", "12", false},
-		{"Two digits valid", "18", true},
-		{"Long valid number", "4532015112830366", true},
-		{"Long invalid number", "4532015112830367", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ValidateLuhn(tt.input); got != tt.expected {
-				t.Errorf("ValidateLuhn(%q) = %v, want %v", tt.input, got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestIsValidEmail(t *testing.T) {
-	tests := []struct {
-		email string
-		valid bool
-	}{
-		{"user@example.com", true},
-		{"user.name@domain.co", true},
-		{"user@sub.domain.com", true},
-		{"user@domain", false},
-		{"userdomain.com", false},
-		{"@domain.com", false},
-		{"user@.com", false},
-		{"user@domain.", false},
-		{"user@domain.c", true}, // базовая проверка, не проверяет длину tld
-		{"user@domain.corporate", true},
-		{"", false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.email, func(t *testing.T) {
-			if got := isValidEmail(tt.email); got != tt.valid {
-				t.Errorf("isValidEmail(%q) = %v, want %v", tt.email, got, tt.valid)
-			}
-		})
-	}
-}
-
 func TestValidateCardData_Luhn(t *testing.T) {
-	validCard := &CardData{
+	validCard := &models.CardData{
 		Name:     "Test Card",
 		Number:   "4111111111111111", // Valid Luhn number
 		Holder:   "John Doe",
@@ -347,7 +302,7 @@ func TestValidateCardData_Luhn(t *testing.T) {
 }
 
 func TestValidateTextSecretData_WithMetadata(t *testing.T) {
-	validData := &TextSecretData{
+	validData := &models.TextSecretData{
 		Name:     "Test Secret",
 		Text:     "Secret text content",
 		Metadata: "Test metadata",
@@ -359,7 +314,7 @@ func TestValidateTextSecretData_WithMetadata(t *testing.T) {
 }
 
 func TestValidateLoginPasswordData_WithMetadata(t *testing.T) {
-	validData := &LoginPasswordData{
+	validData := &models.LoginPasswordData{
 		Name:     "Test Login",
 		Login:    "user@example.com",
 		Password: "password123",
@@ -372,8 +327,91 @@ func TestValidateLoginPasswordData_WithMetadata(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestValidateLoginPasswordData_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    *models.LoginPasswordData
+		wantOk  bool
+		wantErr bool
+	}{
+		{
+			name: "empty name",
+			data: &models.LoginPasswordData{
+				Name:     "",
+				Login:    "user",
+				Password: "pass",
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+		{
+			name: "empty login",
+			data: &models.LoginPasswordData{
+				Name:     "loginname",
+				Login:    "",
+				Password: "pass",
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+		{
+			name: "empty password",
+			data: &models.LoginPasswordData{
+				Name:     "loginname",
+				Login:    "user",
+				Password: "",
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+		{
+			name: "short name",
+			data: &models.LoginPasswordData{
+				Name:     "ab",
+				Login:    "user",
+				Password: "pass",
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+		{
+			name: "short login",
+			data: &models.LoginPasswordData{
+				Name:     "loginname",
+				Login:    "ab",
+				Password: "pass",
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+		{
+			name: "short password",
+			data: &models.LoginPasswordData{
+				Name:     "loginname",
+				Login:    "user",
+				Password: "ab",
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ok, err := ValidateLoginPasswordData(tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateLoginPasswordData() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if ok != tt.wantOk {
+				t.Errorf("ValidateLoginPasswordData() ok = %v, want %v", ok, tt.wantOk)
+			}
+		})
+	}
+}
+
 func TestValidateFileData_WithMetadata(t *testing.T) {
-	validData := &FileData{
+	validData := &models.FileData{
 		Name:     "Test File",
 		FilePath: "/path/to/file.txt",
 		Metadata: "Test metadata",
@@ -382,4 +420,54 @@ func TestValidateFileData_WithMetadata(t *testing.T) {
 	ok, err := ValidateFileData(validData)
 	assert.True(t, ok)
 	assert.NoError(t, err)
+}
+
+func TestValidateFileData_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    *models.FileData
+		wantOk  bool
+		wantErr bool
+	}{
+		{
+			name: "empty name",
+			data: &models.FileData{
+				Name:     "",
+				FilePath: "/path/to/file.txt",
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+		{
+			name: "short name",
+			data: &models.FileData{
+				Name:     "ab",
+				FilePath: "/path/to/file.txt",
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+		{
+			name: "empty file path",
+			data: &models.FileData{
+				Name:     "filename",
+				FilePath: "",
+			},
+			wantOk:  false,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ok, err := ValidateFileData(tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateFileData() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if ok != tt.wantOk {
+				t.Errorf("ValidateFileData() ok = %v, want %v", ok, tt.wantOk)
+			}
+		})
+	}
 }

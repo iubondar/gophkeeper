@@ -44,8 +44,8 @@ type AuthenticateResult struct {
 }
 
 type UserCredentials struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
+	Login    string `json:"login" valid:"required~логин не может быть пустым,minstringlength(3)~логин должен быть не короче 3 символов"`
+	Password string `json:"password" valid:"required~пароль не может быть пустым,minstringlength(3)~пароль должен быть не короче 3 символов"`
 }
 
 // SecretData представляет данные секрета
@@ -58,34 +58,34 @@ type SecretData struct {
 
 // TextSecretData представляет данные текстового секрета
 type TextSecretData struct {
-	Name     string `json:"name"`
-	Text     string `json:"text"`
+	Name     string `json:"name" valid:"required~название секрета не может быть пустым,minstringlength(3)~название секрета должно быть не короче 3 символов"`
+	Text     string `json:"text" valid:"required~текст секрета не может быть пустым"`
 	Metadata string `json:"metadata"`
 }
 
 // LoginPasswordData представляет данные логина и пароля
 type LoginPasswordData struct {
-	Name     string `json:"name"`
-	Login    string `json:"login"`
-	Password string `json:"password"`
+	Name     string `json:"name" valid:"required~название секрета не может быть пустым,minstringlength(3)~название секрета должно быть не короче 3 символов"`
+	Login    string `json:"login" valid:"required~логин не может быть пустым,minstringlength(3)~логин должен быть не короче 3 символов"`
+	Password string `json:"password" valid:"required~пароль не может быть пустым,minstringlength(3)~пароль должен быть не короче 3 символов"`
 	URL      string `json:"url"`
 	Metadata string `json:"metadata"`
 }
 
 // CardData представляет данные банковской карты
 type CardData struct {
-	Name     string `json:"name"`
-	Number   string `json:"number"`
-	Holder   string `json:"holder"`
-	Expiry   string `json:"expiry"`
-	CVV      string `json:"cvv"`
+	Name     string `json:"name" valid:"required~название секрета не может быть пустым,minstringlength(3)~название секрета должно быть не короче 3 символов"`
+	Number   string `json:"number" valid:"required~номер карты не может быть пустым"`
+	Holder   string `json:"holder" valid:"required~имя владельца не может быть пустым"`
+	Expiry   string `json:"expiry" valid:"required~срок действия не может быть пустым"`
+	CVV      string `json:"cvv" valid:"required~CVV не может быть пустым"`
 	Metadata string `json:"metadata"`
 }
 
 // FileData представляет данные файла
 type FileData struct {
-	Name     string `json:"name"`
-	FilePath string `json:"file_path"`
+	Name     string `json:"name" valid:"required~название секрета не может быть пустым,minstringlength(3)~название секрета должно быть не короче 3 символов"`
+	FilePath string `json:"file_path" valid:"required~путь к файлу не может быть пустым"`
 	Metadata string `json:"metadata"`
 }
 
