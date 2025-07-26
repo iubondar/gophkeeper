@@ -231,9 +231,9 @@ func (m *MenuManager) ClearActionState() {
 	m.actionState = nil
 }
 
-// IsActionCommand проверяет, является ли команда командой действия (upload, get, delete)
+// IsActionCommand проверяет, является ли команда командой действия (upload)
 func (m *MenuManager) IsActionCommand(command string) bool {
-	return command == CommandUpload || command == CommandGet || command == CommandDelete
+	return command == CommandUpload
 }
 
 // IsDataTypeCommand проверяет, является ли команда командой выбора типа данных

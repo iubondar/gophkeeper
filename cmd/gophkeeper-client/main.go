@@ -38,6 +38,7 @@ func makeCommandRegistry(apiClient *api.APIClient, crypto *crypto.Crypto) *cmd.C
 	registry.RegisterCommand(cmd.NewRegisterCommand(apiClient, crypto))
 	registry.RegisterCommand(cmd.NewLoginCommand(apiClient, crypto))
 	registry.RegisterCommand(cmd.NewUploadCommand(apiClient, crypto))
+	registry.RegisterCommand(cmd.NewShowCommand(apiClient, crypto))
 	registry.RegisterCommand(cmd.NewUpdateCommand(apiClient, crypto))
 	registry.RegisterCommand(cmd.NewGetCommand(apiClient, crypto))
 	registry.RegisterCommand(cmd.NewDeleteCommand(apiClient, crypto))

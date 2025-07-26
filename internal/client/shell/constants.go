@@ -13,6 +13,7 @@ const (
 	CommandLogin         = "login"
 	CommandExit          = "exit"
 	CommandUpload        = "upload"
+	CommandShow          = "show"
 	CommandUpdate        = "update"
 	CommandGet           = "get"
 	CommandDelete        = "delete"

@@ -89,6 +89,10 @@ func promptUpdateFilePath() {
 	fmt.Print("Введите новый путь к файлу: ")
 }
 
+func promptEnterNewData() {
+	fmt.Println("Введите новые данные:")
+}
+
 func readLine() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')

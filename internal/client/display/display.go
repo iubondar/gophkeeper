@@ -51,3 +51,14 @@ func DisplayFileData(secret *models.FileData, metadata string) {
 	}
 	fmt.Println()
 }
+
+// DisplaySecretInfo отображает информацию о секрете (версия, название, метаданные)
+func DisplaySecretInfo(secretName, secretType, metadata string, version int) {
+	fmt.Printf("Название секрета: %s\n", secretName)
+	fmt.Printf("Версия секрета: %d\n", version)
+	fmt.Printf("Тип секрета: %s\n", secretType)
+	if metadata != "" {
+		fmt.Printf("Метаданные: %s\n", metadata)
+	}
+	fmt.Println()
+}

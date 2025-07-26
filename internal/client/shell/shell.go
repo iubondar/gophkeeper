@@ -59,7 +59,7 @@ func (s *Shell) Run() error {
 		case commandName == CommandGet || commandName == CommandDelete:
 			s.handleGetDeleteCommand(commandName)
 			continue
-		case s.menuManager.IsActionCommand(commandName) && commandName != CommandUpdate:
+		case s.menuManager.IsActionCommand(commandName):
 			s.handleActionCommand(commandName)
 			continue
 		case commandName == CommandUpdate:
@@ -135,13 +135,6 @@ func (s *Shell) executeCommand(commandName string) (any, error) {
 			return nil, fmt.Errorf("ошибка получения данных: %w", err)
 		}
 
-	case CommandUpdate:
-		// Для update нужен только название секрета
-		data, err = s.inputHandler.GetSecretName()
-		if err != nil {
-			return nil, fmt.Errorf("ошибка получения названия секрета: %w", err)
-		}
-
 	default:
 		return nil, fmt.Errorf("неизвестная команда: %s", commandName)
 	}
@@ -194,6 +187,7 @@ func (s *Shell) printSuccessMessage(commandName string) {
 		display.SuccessLogin()
 	case CommandUpload:
 		display.SuccessUpload()
+
 	case CommandUpdate:
 		display.SuccessUpdate()
 	case CommandGet:
@@ -257,7 +251,63 @@ func (s *Shell) handleGetDeleteCommand(commandName string) {
 }
 
 func (s *Shell) handleUpdateCommand() {
-	if result, err := s.executeCommand(CommandUpdate); err != nil {
+	// Получаем название секрета через input
+	secretName, err := s.inputHandler.GetSecretName()
+	if err != nil {
+		display.ErrorMsg(fmt.Errorf("ошибка получения названия секрета: %w", err))
+		return
+	}
+
+	// Получаем данные секрета через команду show
+	showResult, err := s.commandRegistry.Execute(context.Background(), CommandShow, secretName)
+	if err != nil {
+		display.ErrorMsg(fmt.Errorf("ошибка при получении данных секрета: %w", err))
+		return
+	}
+
+	showData, ok := showResult.(*cmd.ShowSecretResult)
+	if !ok {
+		display.ErrorMsg(fmt.Errorf("неверный формат данных секрета"))
+		return
+	}
+
+	// Отображаем информацию о секрете через display
+	display.DisplaySecretInfo(secretName, showData.Type, showData.Metadata, showData.Version)
+
+	// Запрашиваем ввод новых данных через input
+	s.inputHandler.PromptEnterNewData()
+
+	// Получаем обновленные данные в зависимости от типа секрета
+	var updatedData any
+	switch showData.Type {
+	case models.SecretTypeText:
+		updatedData, err = s.inputHandler.GetUpdatedTextData(secretName)
+	case models.SecretTypeLoginPassword:
+		updatedData, err = s.inputHandler.GetUpdatedLoginPasswordData(secretName)
+	case models.SecretTypeCard:
+		updatedData, err = s.inputHandler.GetUpdatedCardData(secretName)
+	case models.SecretTypeFile:
+		updatedData, err = s.inputHandler.GetUpdatedFileData(secretName)
+	default:
+		display.ErrorMsg(fmt.Errorf("неподдерживаемый тип секрета: %s", showData.Type))
+		return
+	}
+
+	if err != nil {
+		display.ErrorMsg(fmt.Errorf("ошибка при получении обновленных данных: %w", err))
+		return
+	}
+
+	// Создаем данные для обновления
+	updateData := &cmd.UpdateData{
+		SecretName: secretName,
+		Version:    showData.Version,
+		Type:       showData.Type,
+		Data:       updatedData,
+	}
+
+	// Выполняем обновление
+	if result, err := s.commandRegistry.Execute(context.Background(), CommandUpdate, updateData); err != nil {
 		display.ErrorMsg(err)
 	} else {
 		s.handleCommandResult(CommandUpdate, result)

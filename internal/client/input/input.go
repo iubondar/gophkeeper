@@ -300,3 +300,13 @@ func (h *InputHandler) GetUpdatedCardData(name string) (*models.CardData, error)
 func (h *InputHandler) GetUpdatedFileData(name string) (*models.FileData, error) {
 	return h.getFileData(name, true)
 }
+
+// GetSecretInfoForUpdate получает название секрета для обновления
+func (h *InputHandler) GetSecretInfoForUpdate() (string, error) {
+	return h.getSecretName()
+}
+
+// PromptEnterNewData запрашивает ввод новых данных
+func (h *InputHandler) PromptEnterNewData() {
+	promptEnterNewData()
+}
