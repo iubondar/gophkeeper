@@ -150,9 +150,65 @@ func (c *APIClient) UploadSecret(ctx context.Context, in models.UploadSecretIn) 
 	return nil
 }
 
+// GetSecretVersion получает версию секрета с сервера
+func (c *APIClient) GetSecretVersion(ctx context.Context, secretName string) (int, error) {
+	request := c.httpc.R().
+		SetContext(ctx).
+		SetQueryParam("name", secretName)
+
+	if err := c.setAuthCookie(request); err != nil {
+		return 0, err
+	}
+
+	response, err := request.Get("/api/version")
+	if err != nil {
+		return 0, err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return 0, err
+	}
+
+	var versionResult struct {
+		Version int `json:"version"`
+	}
+	err = json.Unmarshal(response.Body(), &versionResult)
+	if err != nil {
+		return 0, fmt.Errorf("failed to unmarshal version response: %w", err)
+	}
+
+	return versionResult.Version, nil
+}
+
 // UpdateSecret обновляет секрет на сервере
-func (c *APIClient) UpdateSecret(ctx context.Context, secret models.SecretData) error {
-	// TODO: Implement
+func (c *APIClient) UpdateSecret(ctx context.Context, secret models.SecretData, version int) error {
+	// Подготавливаем данные для обновления
+	updateData := models.UpdateSecretIn{
+		Label:         secret.Name,
+		Type:          secret.Type,
+		Metadata:      secret.Metadata,
+		EncryptedData: []byte(secret.Data),
+		FileKey:       "", // TODO: добавить поддержку файлов
+		Version:       version,
+	}
+
+	// Выполняем обновление
+	request := c.httpc.R().
+		SetContext(ctx).
+		SetBody(updateData)
+
+	if err := c.setAuthCookie(request); err != nil {
+		return err
+	}
+
+	response, err := request.Put("/api/update")
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
 
 	return nil
 }

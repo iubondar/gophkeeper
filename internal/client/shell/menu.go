@@ -1,5 +1,9 @@
 package shell
 
+import (
+	"gophkeeper/internal/client/display"
+)
+
 // MenuItem представляет элемент меню
 type MenuItem struct {
 	ID          string
@@ -144,15 +148,15 @@ func NewMenuManager() *MenuManager {
 func (m *MenuManager) ShowMenu() {
 	state, exists := m.states[m.currentState]
 	if !exists {
-		menuError("Ошибка: состояние меню не найдено")
+		display.MenuError("Ошибка: состояние меню не найдено")
 		return
 	}
 
-	menuTitle(state.Title)
+	display.MenuTitle(state.Title)
 	for _, item := range state.Items {
-		menuItem(item.ID, item.Title, item.Description)
+		display.MenuItem(item.ID, item.Title, item.Description)
 	}
-	menuChoice()
+	display.MenuChoice()
 }
 
 // GetCommandByID возвращает команду по ID пункта меню
@@ -227,9 +231,9 @@ func (m *MenuManager) ClearActionState() {
 	m.actionState = nil
 }
 
-// IsActionCommand проверяет, является ли команда командой действия (upload, update, get, delete)
+// IsActionCommand проверяет, является ли команда командой действия (upload, get, delete)
 func (m *MenuManager) IsActionCommand(command string) bool {
-	return command == CommandUpload || command == CommandUpdate || command == CommandGet || command == CommandDelete
+	return command == CommandUpload || command == CommandGet || command == CommandDelete
 }
 
 // IsDataTypeCommand проверяет, является ли команда командой выбора типа данных

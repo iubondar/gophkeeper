@@ -27,6 +27,7 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 	getHandler := api.NewGetHandler(usecase.NewGetSecretUsecase(storage))
 	deleteHandler := api.NewDeleteHandler(usecase.NewDeleteSecretUsecase(storage))
 	updateHandler := api.NewUpdateHandler(usecase.NewUpdateSecretUsecase(storage))
+	versionHandler := api.NewVersionHandler(usecase.NewGetSecretUsecase(storage))
 
 	// API маршруты
 	router.Route("/api", func(r chi.Router) {
@@ -38,6 +39,7 @@ func NewRouter(storage *storage.Storage) (chi.Router, error) {
 		r.Get("/get", getHandler.GetSecret)
 		r.Delete("/delete", deleteHandler.DeleteSecret)
 		r.Put("/update", updateHandler.Update)
+		r.Get("/version", versionHandler.GetSecretVersion)
 
 		r.Post("/files", handleCreateFile)
 		r.Put("/records/{label}", handleUpdateRecord)

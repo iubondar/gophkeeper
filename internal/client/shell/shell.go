@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"gophkeeper/internal/client/cmd"
+	"gophkeeper/internal/client/display"
+	"gophkeeper/internal/client/input"
 	"gophkeeper/internal/models"
 )
 
@@ -11,7 +13,7 @@ import (
 type Shell struct {
 	commandRegistry *cmd.CommandRegistry
 	menuManager     *MenuManager
-	inputHandler    *InputHandler
+	inputHandler    *input.InputHandler
 }
 
 // NewShell создает новый экземпляр Shell
@@ -19,20 +21,20 @@ func NewShell(registry *cmd.CommandRegistry) *Shell {
 	return &Shell{
 		commandRegistry: registry,
 		menuManager:     NewMenuManager(),
-		inputHandler:    NewInputHandler(),
+		inputHandler:    input.NewInputHandler(),
 	}
 }
 
 // Run запускает интерактивный интерфейс
 func (s *Shell) Run() error {
-	welcome()
+	display.Welcome()
 
 	// Проверяем доступность сервера
 	if err := s.checkServerHealth(); err != nil {
 		return fmt.Errorf("ошибка подключения к серверу: %w", err)
 	}
 
-	serverConnected()
+	display.ServerConnected()
 
 	// Основной цикл меню
 	for {
@@ -41,7 +43,7 @@ func (s *Shell) Run() error {
 
 		commandName, exists := s.menuManager.GetCommandByID(choice)
 		if !exists {
-			invalidChoice()
+			display.InvalidChoice()
 			continue
 		}
 
@@ -57,19 +59,22 @@ func (s *Shell) Run() error {
 		case commandName == CommandGet || commandName == CommandDelete:
 			s.handleGetDeleteCommand(commandName)
 			continue
-		case s.menuManager.IsActionCommand(commandName):
+		case s.menuManager.IsActionCommand(commandName) && commandName != CommandUpdate:
 			s.handleActionCommand(commandName)
+			continue
+		case commandName == CommandUpdate:
+			s.handleUpdateCommand()
 			continue
 		case s.menuManager.IsDataTypeCommand(commandName):
 			s.handleDataTypeCommand(commandName)
 			continue
 		default:
 			if result, err := s.executeCommand(commandName); err != nil {
-				errorMsg(err)
+				display.ErrorMsg(err)
 			} else {
 				s.handleCommandResult(commandName, result)
 				if (commandName == CommandRegister || commandName == CommandLogin) && s.menuManager.GetCurrentState() == MenuStateMain {
-					switchToUserMenuNotice()
+					display.SwitchToUserMenuNotice()
 					s.menuManager.SwitchToState(MenuStateAuthenticated)
 				}
 			}
@@ -106,8 +111,8 @@ func (s *Shell) executeCommand(commandName string) (any, error) {
 		}
 		data = secretName
 
-	case CommandUpload, CommandUpdate:
-		// Для upload и update нужен тип данных, который должен быть передан через контекст меню
+	case CommandUpload:
+		// Для upload нужен тип данных, который должен быть передан через контекст меню
 		actionState := s.menuManager.GetActionState()
 		if actionState == nil || actionState.Type == "" {
 			return nil, fmt.Errorf("тип данных не выбран")
@@ -128,6 +133,13 @@ func (s *Shell) executeCommand(commandName string) (any, error) {
 
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения данных: %w", err)
+		}
+
+	case CommandUpdate:
+		// Для update нужен только название секрета
+		data, err = s.inputHandler.GetSecretName()
+		if err != nil {
+			return nil, fmt.Errorf("ошибка получения названия секрета: %w", err)
 		}
 
 	default:
@@ -157,19 +169,19 @@ func (s *Shell) displaySecretResult(result *cmd.GetSecretResult) {
 	switch result.Type {
 	case models.SecretTypeText:
 		if textSecret, ok := result.Data.(*models.TextSecretData); ok {
-			DisplayTextSecret(textSecret, result.Metadata)
+			display.DisplayTextSecret(textSecret, result.Metadata)
 		}
 	case models.SecretTypeLoginPassword:
 		if loginPassword, ok := result.Data.(*models.LoginPasswordData); ok {
-			DisplayLoginPassword(loginPassword, result.Metadata)
+			display.DisplayLoginPassword(loginPassword, result.Metadata)
 		}
 	case models.SecretTypeCard:
 		if cardData, ok := result.Data.(*models.CardData); ok {
-			DisplayCardData(cardData, result.Metadata)
+			display.DisplayCardData(cardData, result.Metadata)
 		}
 	case models.SecretTypeFile:
 		if fileData, ok := result.Data.(*models.FileData); ok {
-			DisplayFileData(fileData, result.Metadata)
+			display.DisplayFileData(fileData, result.Metadata)
 		}
 	}
 }
@@ -177,19 +189,19 @@ func (s *Shell) displaySecretResult(result *cmd.GetSecretResult) {
 func (s *Shell) printSuccessMessage(commandName string) {
 	switch commandName {
 	case CommandRegister:
-		successRegistration()
+		display.SuccessRegistration()
 	case CommandLogin:
-		successLogin()
+		display.SuccessLogin()
 	case CommandUpload:
-		successUpload()
+		display.SuccessUpload()
 	case CommandUpdate:
-		successUpdate()
+		display.SuccessUpdate()
 	case CommandGet:
-		successGet()
+		display.SuccessGet()
 	case CommandDelete:
-		successDelete()
+		display.SuccessDelete()
 	default:
-		successGeneric(commandName)
+		display.SuccessGeneric(commandName)
 	}
 }
 
@@ -201,19 +213,19 @@ func (s *Shell) checkServerHealth() error {
 
 // Добавляем приватные методы-обработчики
 func (s *Shell) handleExitCommand() error {
-	goodbye()
+	display.Goodbye()
 	return nil
 }
 
 func (s *Shell) handleLogoutCommand() {
 	s.menuManager.SwitchToState(MenuStateMain)
 	s.menuManager.ClearActionState()
-	logout()
+	display.Logout()
 }
 
 func (s *Shell) handleBackCommand() {
 	if !s.menuManager.GoBack() {
-		backNotAllowed()
+		display.BackNotAllowed()
 	}
 }
 
@@ -227,7 +239,7 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 	if actionState != nil {
 		actionState.Type = commandName
 		if result, err := s.executeCommand(actionState.Action); err != nil {
-			errorMsg(err)
+			display.ErrorMsg(err)
 		} else {
 			s.handleCommandResult(actionState.Action, result)
 		}
@@ -238,8 +250,16 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 
 func (s *Shell) handleGetDeleteCommand(commandName string) {
 	if result, err := s.executeCommand(commandName); err != nil {
-		errorMsg(err)
+		display.ErrorMsg(err)
 	} else {
 		s.handleCommandResult(commandName, result)
+	}
+}
+
+func (s *Shell) handleUpdateCommand() {
+	if result, err := s.executeCommand(CommandUpdate); err != nil {
+		display.ErrorMsg(err)
+	} else {
+		s.handleCommandResult(CommandUpdate, result)
 	}
 }
