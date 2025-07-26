@@ -115,7 +115,7 @@ func ValidateSecretName(name string) (bool, error) {
 	}
 
 	if !govalidator.IsAlphanumeric(name) {
-		return false, fmt.Errorf("название секрета должно содержать только буквы и цифры")
+		return false, fmt.Errorf("название секрета должно содержать только латинские буквы и цифры")
 	}
 
 	if len(name) < 3 {

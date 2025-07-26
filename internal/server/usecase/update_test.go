@@ -24,12 +24,14 @@ func TestUpdateSecretUsecase_UpdateSecret(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
 	in := models.UpdateSecretIn{
-		Label:         "label",
-		Type:          "note",
-		Metadata:      "meta",
-		EncryptedData: []byte("data"),
-		FileKey:       "key",
-		Version:       1,
+		UploadSecretIn: models.UploadSecretIn{
+			Label:         "label",
+			Type:          "note",
+			Metadata:      "meta",
+			EncryptedData: []byte("data"),
+			FileKey:       "key",
+		},
+		Version: 1,
 	}
 
 	t.Run("success", func(t *testing.T) {

@@ -18,7 +18,7 @@ type UpdateData struct {
 
 // UpdateAPIClient интерфейс для обновления секрета
 type UpdateAPIClient interface {
-	UpdateSecret(ctx context.Context, secret models.SecretData, version int) error
+	UpdateSecret(ctx context.Context, in models.UpdateSecretIn) error
 }
 
 // UpdateCommand представляет команду обновления секрета
@@ -98,8 +98,24 @@ func (c *UpdateCommand) Execute(ctx context.Context, args any) (any, error) {
 		return nil, fmt.Errorf("неподдерживаемый тип данных для обновления")
 	}
 
+	// Шифруем только конфиденциальные данные (поле Data)
+	// Type и Metadata остаются открытыми для индексации и поиска
+	encryptedData, err := c.crypto.EncryptString(secretData.Data)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при шифровании данных: %w", err)
+	}
+
 	// Выполняем обновление через API клиент
-	err := c.apiClient.UpdateSecret(ctx, secretData, updateData.Version)
+	in := models.UpdateSecretIn{
+		UploadSecretIn: models.UploadSecretIn{
+			Label:         secretData.Name,
+			Type:          secretData.Type,
+			Metadata:      secretData.Metadata,
+			EncryptedData: encryptedData,
+		},
+		Version: updateData.Version,
+	}
+	err = c.apiClient.UpdateSecret(ctx, in)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при обновлении секрета: %w", err)
 	}

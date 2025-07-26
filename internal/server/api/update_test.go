@@ -36,7 +36,7 @@ func TestUpdateHandler_Update(t *testing.T) {
 		{
 			name:           "Successful update",
 			method:         http.MethodPut,
-			body:           mustMarshal(t, models.UpdateSecretIn{Label: "test", Type: "note", Metadata: "meta", EncryptedData: []byte("data"), FileKey: "key", Version: 1}),
+			body:           mustMarshal(t, models.UpdateSecretIn{UploadSecretIn: models.UploadSecretIn{Label: "test", Type: "note", Metadata: "meta", EncryptedData: []byte("data"), FileKey: "key"}, Version: 1}),
 			withAuth:       true,
 			ucResult:       models.UpdateSecretOut{Version: 2},
 			expectedStatus: http.StatusOK,
@@ -44,7 +44,7 @@ func TestUpdateHandler_Update(t *testing.T) {
 		{
 			name:           "Version conflict",
 			method:         http.MethodPut,
-			body:           mustMarshal(t, models.UpdateSecretIn{Label: "test", Type: "note", Version: 1}),
+			body:           mustMarshal(t, models.UpdateSecretIn{UploadSecretIn: models.UploadSecretIn{Label: "test", Type: "note"}, Version: 1}),
 			withAuth:       true,
 			ucError:        models.ErrConflict,
 			expectedStatus: http.StatusConflict,
@@ -52,7 +52,7 @@ func TestUpdateHandler_Update(t *testing.T) {
 		{
 			name:           "Unauthorized - no auth cookie",
 			method:         http.MethodPut,
-			body:           mustMarshal(t, models.UpdateSecretIn{Label: "test", Type: "note", Version: 1}),
+			body:           mustMarshal(t, models.UpdateSecretIn{UploadSecretIn: models.UploadSecretIn{Label: "test", Type: "note"}, Version: 1}),
 			withAuth:       false,
 			expectedStatus: http.StatusUnauthorized,
 		},

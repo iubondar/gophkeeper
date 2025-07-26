@@ -181,21 +181,11 @@ func (c *APIClient) GetSecretVersion(ctx context.Context, secretName string) (in
 }
 
 // UpdateSecret обновляет секрет на сервере
-func (c *APIClient) UpdateSecret(ctx context.Context, secret models.SecretData, version int) error {
-	// Подготавливаем данные для обновления
-	updateData := models.UpdateSecretIn{
-		Label:         secret.Name,
-		Type:          secret.Type,
-		Metadata:      secret.Metadata,
-		EncryptedData: []byte(secret.Data),
-		FileKey:       "", // TODO: добавить поддержку файлов
-		Version:       version,
-	}
-
+func (c *APIClient) UpdateSecret(ctx context.Context, in models.UpdateSecretIn) error {
 	// Выполняем обновление
 	request := c.httpc.R().
 		SetContext(ctx).
-		SetBody(updateData)
+		SetBody(in)
 
 	if err := c.setAuthCookie(request); err != nil {
 		return err

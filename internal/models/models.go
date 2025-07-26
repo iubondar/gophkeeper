@@ -105,12 +105,8 @@ type UploadSecretOut struct {
 }
 
 type UpdateSecretIn struct {
-	Label         string `json:"label"`
-	Type          string `json:"type"`
-	Metadata      string `json:"metadata"`
-	EncryptedData []byte `json:"encrypted_data"`
-	FileKey       string `json:"file_key"`
-	Version       int    `json:"version"` // версия, которую ожидает клиент
+	UploadSecretIn
+	Version int `json:"version"` // версия, которую ожидает клиент
 }
 
 type UpdateSecretOut struct {
