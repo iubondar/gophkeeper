@@ -14,14 +14,18 @@ type Shell struct {
 	commandRegistry *cmd.CommandRegistry
 	menuManager     *MenuManager
 	inputHandler    *input.InputHandler
+	version         string
+	buildTime       string
 }
 
 // NewShell создает новый экземпляр Shell
-func NewShell(registry *cmd.CommandRegistry) *Shell {
+func NewShell(registry *cmd.CommandRegistry, version, buildTime string) *Shell {
 	return &Shell{
 		commandRegistry: registry,
 		menuManager:     NewMenuManager(),
 		inputHandler:    input.NewInputHandler(),
+		version:         version,
+		buildTime:       buildTime,
 	}
 }
 
@@ -55,6 +59,9 @@ func (s *Shell) Run() error {
 			continue
 		case s.menuManager.IsBackCommand(commandName):
 			s.handleBackCommand()
+			continue
+		case commandName == CommandVersion:
+			s.handleVersionCommand()
 			continue
 		case commandName == CommandGet || commandName == CommandDelete:
 			s.handleGetDeleteCommand(commandName)
@@ -249,6 +256,16 @@ func (s *Shell) handleGetDeleteCommand(commandName string) {
 		display.ErrorMsg(err)
 	} else {
 		s.handleCommandResult(commandName, result)
+	}
+}
+
+func (s *Shell) handleVersionCommand() {
+	if result, err := s.commandRegistry.Execute(context.Background(), CommandVersion, nil); err != nil {
+		display.ErrorMsg(err)
+	} else {
+		if versionResult, ok := result.(*cmd.VersionResult); ok {
+			display.DisplayVersion(versionResult.Version, versionResult.BuildTime)
+		}
 	}
 }
 

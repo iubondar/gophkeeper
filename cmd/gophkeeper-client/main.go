@@ -12,6 +12,11 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	Version   string
+	BuildTime string
+)
+
 func init() {
 	zap.ReplaceGlobals(zap.Must(zap.NewDevelopment()))
 }
@@ -27,7 +32,7 @@ func main() {
 	commandRegistry := makeCommandRegistry(apiClient, crypto)
 
 	// Создаем и запускаем интерактивный интерфейс
-	shell := shell.NewShell(commandRegistry)
+	shell := shell.NewShell(commandRegistry, Version, BuildTime)
 	if err := shell.Run(); err != nil {
 		log.Fatal(err)
 	}
@@ -43,6 +48,7 @@ func makeCommandRegistry(apiClient *api.APIClient, crypto *crypto.Crypto) *cmd.C
 	registry.RegisterCommand(cmd.NewGetCommand(apiClient, crypto))
 	registry.RegisterCommand(cmd.NewDeleteCommand(apiClient, crypto))
 	registry.RegisterCommand(cmd.NewHealthCommand(apiClient))
+	registry.RegisterCommand(cmd.NewVersionCommand(Version, BuildTime))
 
 	return registry
 }

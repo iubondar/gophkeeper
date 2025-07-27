@@ -87,3 +87,10 @@ func ErrorMsg(err error) {
 func SwitchToUserMenuNotice() {
 	fmt.Println("Переключение в меню пользователя...")
 }
+
+func DisplayVersion(version, buildTime string) {
+	fmt.Println("=== Версия GophKeeper CLI ===")
+	fmt.Printf("Версия: %s\n", version)
+	fmt.Printf("Дата сборки: %s\n", buildTime)
+	fmt.Println()
+}

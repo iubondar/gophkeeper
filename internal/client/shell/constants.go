@@ -23,4 +23,5 @@ const (
 	CommandLoginPassword = "login_password"
 	CommandCard          = "card"
 	CommandFile          = "file"
+	CommandVersion       = "version"
 )

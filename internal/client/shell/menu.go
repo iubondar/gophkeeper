@@ -58,6 +58,12 @@ func NewMenuManager() *MenuManager {
 			},
 			{
 				ID:          "3",
+				Title:       "Версия",
+				Description: "Показать версию и дату сборки",
+				Command:     CommandVersion,
+			},
+			{
+				ID:          "4",
 				Title:       "Выход",
 				Description: "Завершить работу",
 				Command:     CommandExit,
