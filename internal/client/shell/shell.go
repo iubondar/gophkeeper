@@ -175,6 +175,8 @@ func (s *Shell) displaySecretResult(result *cmd.GetSecretResult) {
 	case models.SecretTypeFile:
 		if fileData, ok := result.Data.(*models.FileData); ok {
 			display.DisplayFileData(fileData, result.Metadata)
+			// Для файлов дополнительно показываем сообщение о скачивании
+			display.SuccessDownloadFile(fileData.FilePath)
 		}
 	}
 }
@@ -187,13 +189,13 @@ func (s *Shell) printSuccessMessage(commandName string) {
 		display.SuccessLogin()
 	case CommandUpload:
 		display.SuccessUpload()
-
 	case CommandUpdate:
 		display.SuccessUpdate()
 	case CommandGet:
 		display.SuccessGet()
 	case CommandDelete:
 		display.SuccessDelete()
+
 	default:
 		display.SuccessGeneric(commandName)
 	}

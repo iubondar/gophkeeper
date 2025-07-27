@@ -26,18 +26,16 @@ func NewRouter(storage *pg.Storage, fileStorage file.FileStorage) (chi.Router, e
 	authenticateHandler := api.NewAuthenticateHandler(usecase.NewAuthenticateUsecase(storage))
 	uploadHandler := api.NewUploadHandler(usecase.NewUploadSecretUsecase(storage))
 	getHandler := api.NewGetHandler(usecase.NewGetSecretUsecase(storage))
-	deleteHandler := api.NewDeleteHandler(usecase.NewDeleteSecretUsecase(storage))
+	deleteHandler := api.NewDeleteHandler(usecase.NewDeleteSecretUsecase(storage, fileStorage))
 	updateHandler := api.NewUpdateHandler(usecase.NewUpdateSecretUsecase(storage))
 	versionHandler := api.NewVersionHandler(usecase.NewGetSecretUsecase(storage))
 
-	// Создаем file usecases и handlers
+	// Создаем file usecases и handlers для загрузки и скачивания
 	uploadFileUsecase := usecase.NewUploadFileUsecase(storage, fileStorage)
 	downloadFileUsecase := usecase.NewDownloadFileUsecase(storage, fileStorage)
-	deleteFileUsecase := usecase.NewDeleteFileUsecase(storage, fileStorage)
 
 	uploadFileHandler := api.NewUploadFileHandler(uploadFileUsecase)
 	downloadFileHandler := api.NewDownloadFileHandler(downloadFileUsecase)
-	deleteFileHandler := api.NewDeleteFileHandler(deleteFileUsecase)
 
 	// API маршруты
 	router.Route("/api", func(r chi.Router) {
@@ -54,7 +52,6 @@ func NewRouter(storage *pg.Storage, fileStorage file.FileStorage) (chi.Router, e
 		// File routes
 		r.Post("/files", uploadFileHandler.UploadFile)
 		r.Get("/files/{label}/download", downloadFileHandler.DownloadFile)
-		r.Delete("/files/{label}", deleteFileHandler.DeleteFile)
 	})
 
 	return router, nil

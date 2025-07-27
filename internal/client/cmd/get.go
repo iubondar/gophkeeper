@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
+	"io"
+	"os"
+	"path/filepath"
 )
 
 // GetSecretResult представляет результат выполнения команды get
@@ -17,6 +20,7 @@ type GetSecretResult struct {
 
 type GetAPIClient interface {
 	GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error)
+	DownloadFile(ctx context.Context, label string) (io.ReadCloser, error)
 }
 
 // GetCommand представляет команду получения секрета
@@ -64,7 +68,8 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 		return handleCardSecret(decryptedData, secret.Metadata)
 
 	case models.SecretTypeFile:
-		return handleFileSecret(decryptedData, secret.Metadata)
+		// Для файлов используем специальную логику скачивания
+		return handleFileDownload(c.apiClient, secret.Label, secret.Metadata)
 	default:
 		return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 	}
@@ -128,4 +133,68 @@ func handleFileSecret(decryptedData string, metadata string) (*GetSecretResult, 
 		Data:     &fileData,
 		Metadata: metadata,
 	}, nil
+}
+
+func handleFileDownload(apiClient GetAPIClient, label, metadata string) (*GetSecretResult, error) {
+	// Скачиваем файл с сервера
+	reader, err := apiClient.DownloadFile(context.Background(), label)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при скачивании файла: %w", err)
+	}
+	defer reader.Close()
+
+	// Получаем путь к папке загрузок
+	downloadsDir, err := getDownloadsDir()
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при получении пути к папке загрузок: %w", err)
+	}
+
+	// Создаем путь для сохранения файла
+	filePath := filepath.Join(downloadsDir, label)
+
+	// Создаем файл для записи
+	file, err := os.Create(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при создании файла: %w", err)
+	}
+	defer file.Close()
+
+	// Копируем данные из reader в файл
+	_, err = io.Copy(file, reader)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при записи файла: %w", err)
+	}
+
+	// Создаем результат с информацией о скачанном файле
+	fileData := &models.FileData{
+		Name:     label,
+		FilePath: filePath,
+		Metadata: metadata,
+	}
+
+	return &GetSecretResult{
+		Type:     models.SecretTypeFile,
+		Data:     fileData,
+		Metadata: metadata,
+	}, nil
+}
+
+// getDownloadsDir возвращает путь к папке загрузок пользователя
+func getDownloadsDir() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	downloadsDir := filepath.Join(homeDir, "Downloads")
+
+	// Создаем папку, если она не существует
+	if _, err := os.Stat(downloadsDir); os.IsNotExist(err) {
+		err = os.MkdirAll(downloadsDir, 0755)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return downloadsDir, nil
 }

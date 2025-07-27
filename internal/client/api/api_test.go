@@ -169,64 +169,6 @@ func TestAPIClient_DownloadFile(t *testing.T) {
 	}
 }
 
-func TestAPIClient_DeleteFile(t *testing.T) {
-	tests := []struct {
-		name           string
-		label          string
-		serverStatus   int
-		serverResponse string
-		expectedError  string
-	}{
-		{
-			name:         "successful delete",
-			label:        "test-file",
-			serverStatus: http.StatusNoContent,
-		},
-		{
-			name:           "file not found",
-			label:          "non-existent-file",
-			serverStatus:   http.StatusNotFound,
-			serverResponse: `{"message":"File not found"}`,
-			expectedError:  "File not found",
-		},
-		{
-			name:           "unauthorized",
-			label:          "test-file",
-			serverStatus:   http.StatusUnauthorized,
-			serverResponse: `{"message":"Unauthorized"}`,
-			expectedError:  "Unauthorized",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				expectedPath := "/api/files/" + tt.label
-				assert.Equal(t, expectedPath, r.URL.Path)
-				assert.Equal(t, http.MethodDelete, r.Method)
-
-				w.WriteHeader(tt.serverStatus)
-				if tt.serverResponse != "" {
-					w.Write([]byte(tt.serverResponse))
-				}
-			}))
-			defer server.Close()
-
-			client := NewAPIClient(server.URL)
-			client.accessToken = "test-token"
-
-			err := client.DeleteFile(context.Background(), tt.label)
-
-			if tt.expectedError != "" {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestAPIClient_UploadFile_NoAuthToken(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -260,21 +202,6 @@ func TestAPIClient_DownloadFile_NoAuthToken(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "access token is required")
 	assert.Nil(t, reader)
-}
-
-func TestAPIClient_DeleteFile_NoAuthToken(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer server.Close()
-
-	client := NewAPIClient(server.URL)
-	// Не устанавливаем accessToken
-
-	err := client.DeleteFile(context.Background(), "test-file")
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "access token is required")
 }
 
 func TestAPIClient_DownloadFile_BinaryData(t *testing.T) {

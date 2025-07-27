@@ -32,7 +32,7 @@ func (c *DeleteCommand) Execute(ctx context.Context, args any) (any, error) {
 		return nil, fmt.Errorf("неверный тип аргументов для команды удаления")
 	}
 
-	// Выполняем удаление через API клиент
+	// Удаляем секрет через API клиент (сервер сам определит тип и выполнит соответствующее удаление)
 	err := c.apiClient.DeleteSecret(ctx, secretName)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при удалении секрета: %w", err)

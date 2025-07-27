@@ -308,27 +308,6 @@ func (c *APIClient) DownloadFile(ctx context.Context, label string) (io.ReadClos
 	return io.NopCloser(bytes.NewReader(response.Body())), nil
 }
 
-// DeleteFile удаляет файл с сервера
-func (c *APIClient) DeleteFile(ctx context.Context, label string) error {
-	request := c.httpc.R().
-		SetContext(ctx)
-
-	if err := c.setAuthCookie(request); err != nil {
-		return err
-	}
-
-	response, err := request.Delete(fmt.Sprintf("/api/files/%s", label))
-	if err != nil {
-		return err
-	}
-
-	if err := c.handleErrorResponse(response); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // HealthCheck проверяет доступность сервера по /api/health
 func (c *APIClient) HealthCheck(ctx context.Context) error {
 	response, err := c.httpc.R().

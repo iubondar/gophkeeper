@@ -72,6 +72,10 @@ func SuccessDelete() {
 	fmt.Println("✅ Секрет успешно удален!")
 }
 
+func SuccessDownloadFile(filePath string) {
+	fmt.Printf("✅ Файл успешно скачан и сохранен: %s\n", filePath)
+}
+
 func SuccessGeneric(commandName string) {
 	fmt.Printf("✅ %s выполнена успешно!\n", commandName)
 }

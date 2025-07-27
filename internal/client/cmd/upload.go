@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
+	"io"
+	"os"
+	"path/filepath"
 )
 
 // UploadAPIClient интерфейс для загрузки секрета
 type UploadAPIClient interface {
 	UploadSecret(ctx context.Context, in models.UploadSecretIn) error
+	UploadFile(ctx context.Context, label, metadata string, file io.Reader, filename string) (*models.UploadSecretOut, error)
 }
 
 // UploadCommand представляет команду загрузки секрета
@@ -70,16 +74,23 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 		}
 
 	case *models.FileData:
-		jsonData, err := json.Marshal(data)
+		// Для файлов используем специальную логику загрузки
+		file, err := os.Open(data.FilePath)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка при сериализации данных файла: %w", err)
+			return nil, fmt.Errorf("ошибка при открытии файла: %w", err)
 		}
-		secretData = models.SecretData{
-			Name:     data.Name,
-			Type:     models.SecretTypeFile,
-			Data:     string(jsonData),
-			Metadata: data.Metadata,
+		defer file.Close()
+
+		// Получаем имя файла из пути
+		filename := filepath.Base(data.FilePath)
+
+		// Загружаем файл через специальный API
+		result, err := c.apiClient.UploadFile(ctx, data.Name, data.Metadata, file, filename)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при загрузке файла: %w", err)
 		}
+
+		return result, nil
 
 	default:
 		return nil, fmt.Errorf("неподдерживаемый тип данных для загрузки")
