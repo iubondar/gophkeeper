@@ -56,7 +56,23 @@ func (c *ShowCommand) Execute(ctx context.Context, args any) (any, error) {
 		return nil, fmt.Errorf("ошибка при получении версии секрета: %w", err)
 	}
 
-	// Расшифровываем текущие данные для отображения
+	// Для файлов создаем структуру с информацией о файле
+	// Файлы не шифруются в EncryptedData, а хранятся в файловом хранилище
+	if secret.Type == models.SecretTypeFile {
+		fileData := &models.FileData{
+			Name:     secret.Label,
+			FilePath: "", // Путь будет установлен при скачивании
+			Metadata: secret.Metadata,
+		}
+		return &ShowSecretResult{
+			Type:     models.SecretTypeFile,
+			Data:     fileData,
+			Metadata: secret.Metadata,
+			Version:  version,
+		}, nil
+	}
+
+	// Расшифровываем данные секрета для всех остальных типов
 	decryptedData, err := c.crypto.DecryptString(secret.EncryptedData)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при расшифровке секрета: %w", err)
@@ -72,9 +88,6 @@ func (c *ShowCommand) Execute(ctx context.Context, args any) (any, error) {
 
 	case models.SecretTypeCard:
 		return handleShowCardSecret(decryptedData, secret.Metadata, version)
-
-	case models.SecretTypeFile:
-		return handleShowFileSecret(decryptedData, secret.Metadata, version)
 
 	default:
 		return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
@@ -127,19 +140,6 @@ func handleShowCardSecret(decryptedData string, metadata string, version int) (*
 	return &ShowSecretResult{
 		Type:     models.SecretTypeCard,
 		Data:     &cardData,
-		Metadata: metadata,
-		Version:  version,
-	}, nil
-}
-
-func handleShowFileSecret(decryptedData string, metadata string, version int) (*ShowSecretResult, error) {
-	var fileData models.FileData
-	if err := json.Unmarshal([]byte(decryptedData), &fileData); err != nil {
-		return nil, fmt.Errorf("ошибка при разборе данных файла: %w", err)
-	}
-	return &ShowSecretResult{
-		Type:     models.SecretTypeFile,
-		Data:     &fileData,
 		Metadata: metadata,
 		Version:  version,
 	}, nil

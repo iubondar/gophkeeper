@@ -51,7 +51,13 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 		return nil, fmt.Errorf("ошибка при получении секрета: %w", err)
 	}
 
-	// Расшифровываем данные секрета только для поддерживаемых типов
+	// Для файлов используем специальную логику скачивания
+	// Файлы не шифруются в EncryptedData, а хранятся в файловом хранилище
+	if secret.Type == models.SecretTypeFile {
+		return handleFileDownload(c.apiClient, secret.Label, secret.Metadata)
+	}
+
+	// Расшифровываем данные секрета для всех остальных типов
 	decryptedData, err := c.crypto.DecryptString(secret.EncryptedData)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при расшифровке секрета: %w", err)
@@ -68,9 +74,6 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 	case models.SecretTypeCard:
 		return handleCardSecret(decryptedData, secret.Metadata)
 
-	case models.SecretTypeFile:
-		// Для файлов используем специальную логику скачивания
-		return handleFileDownload(c.apiClient, secret.Label, secret.Metadata)
 	default:
 		return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 	}
@@ -120,18 +123,6 @@ func handleCardSecret(decryptedData string, metadata string) (*GetSecretResult, 
 	return &GetSecretResult{
 		Type:     models.SecretTypeCard,
 		Data:     &cardData,
-		Metadata: metadata,
-	}, nil
-}
-
-func handleFileSecret(decryptedData string, metadata string) (*GetSecretResult, error) {
-	var fileData models.FileData
-	if err := json.Unmarshal([]byte(decryptedData), &fileData); err != nil {
-		return nil, fmt.Errorf("ошибка при разборе данных файла: %w", err)
-	}
-	return &GetSecretResult{
-		Type:     models.SecretTypeFile,
-		Data:     &fileData,
 		Metadata: metadata,
 	}, nil
 }
