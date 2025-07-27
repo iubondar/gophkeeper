@@ -10,6 +10,83 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNormalizeFilePath(t *testing.T) {
+	// Получаем домашнюю директорию для сравнения
+	homeDir, err := os.UserHomeDir()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "путь без тильды",
+			input:    "/path/to/file",
+			expected: "/path/to/file",
+			wantErr:  false,
+		},
+		{
+			name:     "путь с тильдой в середине",
+			input:    "/path/~file",
+			expected: "/path/~file",
+			wantErr:  false,
+		},
+		{
+			name:     "только тильда",
+			input:    "~",
+			expected: homeDir,
+			wantErr:  false,
+		},
+		{
+			name:     "тильда с путем",
+			input:    "~/Documents/file.txt",
+			expected: filepath.Join(homeDir, "Documents", "file.txt"),
+			wantErr:  false,
+		},
+		{
+			name:     "тильда с относительным путем",
+			input:    "~/file.txt",
+			expected: filepath.Join(homeDir, "file.txt"),
+			wantErr:  false,
+		},
+		{
+			name:     "тильда с именем пользователя (не поддерживается)",
+			input:    "~username/file.txt",
+			expected: "~username/file.txt",
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := NormalizeFilePath(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestNormalizeFilePath_CrossPlatform(t *testing.T) {
+	// Тестируем на разных платформах
+	homeDir, err := os.UserHomeDir()
+	require.NoError(t, err)
+
+	// Тестируем с тильдой
+	normalizedPath, err := NormalizeFilePath("~/test.txt")
+	require.NoError(t, err)
+	expectedPath := filepath.Join(homeDir, "test.txt")
+	assert.Equal(t, expectedPath, normalizedPath)
+
+	// Проверяем, что путь использует правильные разделители для ОС
+	assert.True(t, filepath.IsAbs(normalizedPath))
+}
+
 func TestGetDownloadsDir(t *testing.T) {
 	// Тестируем получение папки загрузок
 	downloadsDir, err := GetDownloadsDir()

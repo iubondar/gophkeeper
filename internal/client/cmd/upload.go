@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
+	"gophkeeper/internal/os_utils"
 	"io"
 	"os"
 	"path/filepath"
@@ -75,7 +76,13 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 
 	case *models.FileData:
 		// Для файлов используем специальную логику загрузки
-		file, err := os.Open(data.FilePath)
+		// Нормализуем путь к файлу (расширяем символ ~ и другие преобразования)
+		normalizedPath, err := os_utils.NormalizeFilePath(data.FilePath)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при обработке пути к файлу: %w", err)
+		}
+
+		file, err := os.Open(normalizedPath)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при открытии файла: %w", err)
 		}

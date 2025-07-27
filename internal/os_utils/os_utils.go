@@ -6,7 +6,51 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
+
+// NormalizeFilePath нормализует путь к файлу, выполняя необходимые преобразования
+// Включает расширение символа ~ в домашнюю директорию пользователя
+func NormalizeFilePath(path string) (string, error) {
+	// Расширяем символ ~ в начале пути
+	expandedPath, err := expandTilde(path)
+	if err != nil {
+		return "", err
+	}
+
+	// В будущем здесь могут быть добавлены другие преобразования
+	// например, нормализация разделителей путей, обработка переменных окружения и т.д.
+
+	return expandedPath, nil
+}
+
+// expandTilde расширяет символ ~ в начале пути на домашнюю директорию пользователя
+// Если путь не начинается с ~, возвращает путь без изменений
+func expandTilde(path string) (string, error) {
+	if !strings.HasPrefix(path, "~") {
+		return path, nil
+	}
+
+	// Получаем домашнюю директорию пользователя
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	// Если путь равен "~", возвращаем домашнюю директорию
+	if path == "~" {
+		return homeDir, nil
+	}
+
+	// Если путь начинается с "~/", заменяем на домашнюю директорию
+	if strings.HasPrefix(path, "~/") {
+		return filepath.Join(homeDir, path[2:]), nil
+	}
+
+	// Для других случаев (например, "~username") возвращаем путь без изменений
+	// так как это может быть ссылка на домашнюю директорию другого пользователя
+	return path, nil
+}
 
 // GetDownloadsDir возвращает путь к стандартной папке загрузок пользователя
 // Поддерживает Windows, macOS и Linux
