@@ -1,12 +1,14 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
+	"io"
 	"net/http"
 	"strings"
 
@@ -242,6 +244,80 @@ func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
 	}
 
 	response, err := request.Delete("/api/delete")
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UploadFile загружает файл на сервер
+func (c *APIClient) UploadFile(ctx context.Context, label, metadata string, file io.Reader, filename string) (*models.UploadSecretOut, error) {
+	request := c.httpc.R().
+		SetContext(ctx).
+		SetFileReader("file", filename, file).
+		SetFormData(map[string]string{
+			"label":    label,
+			"metadata": metadata,
+		})
+
+	if err := c.setAuthCookie(request); err != nil {
+		return nil, err
+	}
+
+	response, err := request.Post("/api/files")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return nil, err
+	}
+
+	var out models.UploadSecretOut
+	err = json.Unmarshal(response.Body(), &out)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal upload file response: %w", err)
+	}
+
+	return &out, nil
+}
+
+// DownloadFile скачивает файл с сервера
+func (c *APIClient) DownloadFile(ctx context.Context, label string) (io.ReadCloser, error) {
+	request := c.httpc.R().
+		SetContext(ctx)
+
+	if err := c.setAuthCookie(request); err != nil {
+		return nil, err
+	}
+
+	response, err := request.Get(fmt.Sprintf("/api/files/%s/download", label))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return nil, err
+	}
+
+	return io.NopCloser(bytes.NewReader(response.Body())), nil
+}
+
+// DeleteFile удаляет файл с сервера
+func (c *APIClient) DeleteFile(ctx context.Context, label string) error {
+	request := c.httpc.R().
+		SetContext(ctx)
+
+	if err := c.setAuthCookie(request); err != nil {
+		return err
+	}
+
+	response, err := request.Delete(fmt.Sprintf("/api/files/%s", label))
 	if err != nil {
 		return err
 	}
