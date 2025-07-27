@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // GetSecretResult представляет результат выполнения команды get
@@ -54,7 +55,7 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Для файлов используем специальную логику скачивания
 	// Файлы не шифруются в EncryptedData, а хранятся в файловом хранилище
 	if secret.Type == models.SecretTypeFile {
-		return handleFileDownload(c.apiClient, secret.Label, secret.Metadata)
+		return handleFileDownload(c.apiClient, secret.Label, secret.Metadata, secret.FileName)
 	}
 
 	// Расшифровываем данные секрета для всех остальных типов
@@ -127,7 +128,7 @@ func handleCardSecret(decryptedData string, metadata string) (*GetSecretResult, 
 	}, nil
 }
 
-func handleFileDownload(apiClient GetAPIClient, label, metadata string) (*GetSecretResult, error) {
+func handleFileDownload(apiClient GetAPIClient, label, metadata, fileName string) (*GetSecretResult, error) {
 	// Скачиваем файл с сервера
 	reader, err := apiClient.DownloadFile(context.Background(), label)
 	if err != nil {
@@ -141,8 +142,28 @@ func handleFileDownload(apiClient GetAPIClient, label, metadata string) (*GetSec
 		return nil, fmt.Errorf("ошибка при получении пути к папке загрузок: %w", err)
 	}
 
-	// Создаем путь для сохранения файла
-	filePath := filepath.Join(downloadsDir, label)
+	// Используем оригинальное имя файла из БД, или fallback на label
+	originalName := fileName
+	if originalName == "" {
+		originalName = label
+	}
+
+	// Создаем путь для сохранения файла с оригинальным именем
+	filePath := filepath.Join(downloadsDir, originalName)
+
+	// Проверяем, существует ли файл с таким именем, и если да, добавляем номер
+	counter := 1
+	originalFilePath := filePath
+	for {
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			break
+		}
+		// Файл существует, добавляем номер
+		ext := filepath.Ext(originalFilePath)
+		nameWithoutExt := strings.TrimSuffix(originalFilePath, ext)
+		filePath = fmt.Sprintf("%s_%d%s", nameWithoutExt, counter, ext)
+		counter++
+	}
 
 	// Создаем файл для записи
 	file, err := os.Create(filePath)

@@ -18,12 +18,12 @@ type UploadFileStorage interface {
 
 // UploadFileRepository интерфейс для работы с записями файлов при загрузке
 type UploadFileRepository interface {
-	InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, version int, createdAt, updatedAt time.Time) error
+	InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, fileName string, version int, createdAt, updatedAt time.Time) error
 }
 
 // UploadFileUsecase интерфейс для загрузки файлов
 type UploadFileUsecase interface {
-	UploadFile(ctx context.Context, label, metadata string, reader io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error)
+	UploadFile(ctx context.Context, label, metadata, fileName string, reader io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error)
 }
 
 type uploadFileUsecase struct {
@@ -40,7 +40,7 @@ func NewUploadFileUsecase(repo UploadFileRepository, storage UploadFileStorage) 
 }
 
 // UploadFile загружает файл в хранилище и создает запись в БД
-func (uc *uploadFileUsecase) UploadFile(ctx context.Context, label, metadata string, reader io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error) {
+func (uc *uploadFileUsecase) UploadFile(ctx context.Context, label, metadata, fileName string, reader io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error) {
 	// Генерируем уникальный ключ для файла
 	fileKey := uuid.New().String()
 
@@ -56,7 +56,7 @@ func (uc *uploadFileUsecase) UploadFile(ctx context.Context, label, metadata str
 	updatedAt := time.Now()
 	version := 1
 
-	err = uc.repo.InsertRecord(ctx, id, userID, label, models.SecretTypeFile, metadata, nil, fileKey, version, createdAt, updatedAt)
+	err = uc.repo.InsertRecord(ctx, id, userID, label, models.SecretTypeFile, metadata, nil, fileKey, fileName, version, createdAt, updatedAt)
 	if err != nil {
 		// Если не удалось создать запись в БД, удаляем файл из хранилища
 		if deleteErr := uc.storage.DeleteFile(ctx, fileKey); deleteErr != nil {

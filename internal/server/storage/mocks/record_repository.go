@@ -44,17 +44,17 @@ func (m *MockRecordRepository) EXPECT() *MockRecordRepositoryMockRecorder {
 }
 
 // InsertRecord mocks base method.
-func (m *MockRecordRepository) InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, version int, createdAt, updatedAt time.Time) error {
+func (m *MockRecordRepository) InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey, fileName string, version int, createdAt, updatedAt time.Time) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertRecord", ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+	ret := m.ctrl.Call(m, "InsertRecord", ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, fileName, version, createdAt, updatedAt)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InsertRecord indicates an expected call of InsertRecord.
-func (mr *MockRecordRepositoryMockRecorder) InsertRecord(ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt any) *gomock.Call {
+func (mr *MockRecordRepositoryMockRecorder) InsertRecord(ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, fileName, version, createdAt, updatedAt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRecord", reflect.TypeOf((*MockRecordRepository)(nil).InsertRecord), ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertRecord", reflect.TypeOf((*MockRecordRepository)(nil).InsertRecord), ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, fileName, version, createdAt, updatedAt)
 }
 
 // MockUploadSecretUsecase is a mock of UploadSecretUsecase interface.

@@ -35,21 +35,21 @@ func TestUpdateSecretUsecase_UpdateSecret(t *testing.T) {
 	}
 
 	t.Run("success", func(t *testing.T) {
-		mockRepo.EXPECT().UpdateRecordByLabel(gomock.Any(), in.Label, userID, in.Type, in.Metadata, in.EncryptedData, in.FileKey, in.Version, gomock.AssignableToTypeOf(time.Now())).Return(2, nil)
+		mockRepo.EXPECT().UpdateRecordByLabel(gomock.Any(), in.Label, userID, in.Type, in.Metadata, in.EncryptedData, in.FileKey, "", in.Version, gomock.AssignableToTypeOf(time.Now())).Return(2, nil)
 		out, err := uc.UpdateSecret(ctx, in, userID)
 		require.NoError(t, err)
 		require.Equal(t, 2, out.Version)
 	})
 
 	t.Run("conflict", func(t *testing.T) {
-		mockRepo.EXPECT().UpdateRecordByLabel(gomock.Any(), in.Label, userID, in.Type, in.Metadata, in.EncryptedData, in.FileKey, in.Version, gomock.AssignableToTypeOf(time.Now())).Return(0, models.ErrConflict)
+		mockRepo.EXPECT().UpdateRecordByLabel(gomock.Any(), in.Label, userID, in.Type, in.Metadata, in.EncryptedData, in.FileKey, "", in.Version, gomock.AssignableToTypeOf(time.Now())).Return(0, models.ErrConflict)
 		_, err := uc.UpdateSecret(ctx, in, userID)
 		require.ErrorIs(t, err, models.ErrConflict)
 	})
 
 	t.Run("other error", func(t *testing.T) {
 		errSome := errors.New("some error")
-		mockRepo.EXPECT().UpdateRecordByLabel(gomock.Any(), in.Label, userID, in.Type, in.Metadata, in.EncryptedData, in.FileKey, in.Version, gomock.AssignableToTypeOf(time.Now())).Return(0, errSome)
+		mockRepo.EXPECT().UpdateRecordByLabel(gomock.Any(), in.Label, userID, in.Type, in.Metadata, in.EncryptedData, in.FileKey, "", in.Version, gomock.AssignableToTypeOf(time.Now())).Return(0, errSome)
 		_, err := uc.UpdateSecret(ctx, in, userID)
 		require.ErrorIs(t, err, errSome)
 	})

@@ -120,6 +120,7 @@ type GetSecretOut struct {
 	Metadata      string `json:"metadata"`
 	EncryptedData []byte `json:"encrypted_data"`
 	FileKey       string `json:"file_key"`
+	FileName      string `json:"file_name"`
 	Version       int    `json:"version"`
 }
 

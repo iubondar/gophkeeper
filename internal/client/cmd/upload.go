@@ -88,11 +88,11 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 		}
 		defer file.Close()
 
-		// Получаем имя файла из пути
-		filename := filepath.Base(data.FilePath)
+		// Получаем оригинальное имя файла из пути
+		originalName := filepath.Base(data.FilePath)
 
 		// Загружаем файл через специальный API
-		result, err := c.apiClient.UploadFile(ctx, data.Name, data.Metadata, file, filename)
+		result, err := c.apiClient.UploadFile(ctx, data.Name, data.Metadata, file, originalName)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при загрузке файла: %w", err)
 		}

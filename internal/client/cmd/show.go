@@ -59,9 +59,15 @@ func (c *ShowCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Для файлов создаем структуру с информацией о файле
 	// Файлы не шифруются в EncryptedData, а хранятся в файловом хранилище
 	if secret.Type == models.SecretTypeFile {
+		// Используем оригинальное имя файла из БД, или fallback на label
+		originalName := secret.FileName
+		if originalName == "" {
+			originalName = secret.Label
+		}
+
 		fileData := &models.FileData{
 			Name:     secret.Label,
-			FilePath: "", // Путь будет установлен при скачивании
+			FilePath: originalName, // Используем оригинальное имя как FilePath для отображения
 			Metadata: secret.Metadata,
 		}
 		return &ShowSecretResult{

@@ -48,13 +48,14 @@ func TestUploadFileUsecase_UploadFile(t *testing.T) {
 				metadata,
 				nil,
 				gomock.Any(),
+				"test.txt",
 				1,
 				gomock.Any(),
 				gomock.Any(),
 			).
 			Return(nil)
 
-		result, err := uc.UploadFile(ctx, label, metadata, reader, size, userID)
+		result, err := uc.UploadFile(ctx, label, metadata, "test.txt", reader, size, userID)
 
 		require.NoError(t, err)
 		assert.NotEmpty(t, result.ID)
@@ -67,7 +68,7 @@ func TestUploadFileUsecase_UploadFile(t *testing.T) {
 			UploadFile(gomock.Any(), gomock.Any(), gomock.Any(), size).
 			Return(assert.AnError)
 
-		result, err := uc.UploadFile(ctx, label, metadata, reader, size, userID)
+		result, err := uc.UploadFile(ctx, label, metadata, "test.txt", reader, size, userID)
 
 		assert.Error(t, err)
 		assert.Equal(t, models.UploadSecretOut{}, result)
@@ -95,13 +96,14 @@ func TestUploadFileUsecase_UploadFile(t *testing.T) {
 				metadata,
 				nil,
 				gomock.Any(),
+				"test.txt",
 				1,
 				gomock.Any(),
 				gomock.Any(),
 			).
 			Return(models.ErrConflict)
 
-		result, err := uc.UploadFile(ctx, label, metadata, reader, size, userID)
+		result, err := uc.UploadFile(ctx, label, metadata, "test.txt", reader, size, userID)
 
 		assert.Error(t, err)
 		assert.Equal(t, models.ErrConflict, err)

@@ -180,19 +180,19 @@ func (s *StorageTestSuite) TestInsertRecord() {
 	s.Require().NoError(err)
 
 	s.Run("successful record insertion", func() {
-		err = s.storage.InsertRecord(ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		err = s.storage.InsertRecord(ctx, id, userID, label, recordType, metadata, encryptedData, fileKey, "", version, createdAt, updatedAt)
 		s.Require().NoError(err)
 	})
 
 	s.Run("conflict on duplicate label", func() {
 		id2 := uuid.New()
-		err = s.storage.InsertRecord(ctx, id2, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		err = s.storage.InsertRecord(ctx, id2, userID, label, recordType, metadata, encryptedData, fileKey, "", version, createdAt, updatedAt)
 		s.Require().Error(err)
 		s.Require().Equal(models.ErrConflict, err)
 	})
 
 	s.Run("conflict on duplicate record ID", func() {
-		err = s.storage.InsertRecord(ctx, id, userID, "different-label", recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		err = s.storage.InsertRecord(ctx, id, userID, "different-label", recordType, metadata, encryptedData, fileKey, "", version, createdAt, updatedAt)
 		s.Require().Error(err)
 		// Это должно вызвать ошибку primary key violation
 	})
@@ -205,7 +205,7 @@ func (s *StorageTestSuite) TestInsertRecord() {
 
 		id3 := uuid.New()
 		label2 := "test-label-2"
-		err = s.storage.InsertRecord(ctx, id3, userID2, label2, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		err = s.storage.InsertRecord(ctx, id3, userID2, label2, recordType, metadata, encryptedData, fileKey, "", version, createdAt, updatedAt)
 		s.Require().NoError(err)
 	})
 
@@ -217,7 +217,7 @@ func (s *StorageTestSuite) TestInsertRecord() {
 
 		id4 := uuid.New()
 		// Используем тот же label, но для другого пользователя
-		err = s.storage.InsertRecord(ctx, id4, userID3, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+		err = s.storage.InsertRecord(ctx, id4, userID3, label, recordType, metadata, encryptedData, fileKey, "", version, createdAt, updatedAt)
 		s.Require().Error(err)
 		s.Require().Equal(models.ErrConflict, err)
 	})
@@ -243,7 +243,7 @@ func (s *StorageTestSuite) TestGetRecordByLabel() {
 	createdAt := time.Now()
 	updatedAt := time.Now()
 
-	err = s.storage.InsertRecord(ctx, recordID, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+	err = s.storage.InsertRecord(ctx, recordID, userID, label, recordType, metadata, encryptedData, fileKey, "", version, createdAt, updatedAt)
 	s.Require().NoError(err)
 
 	s.Run("successful get record", func() {
@@ -285,7 +285,7 @@ func (s *StorageTestSuite) TestDeleteRecordByLabel() {
 	s.Require().NoError(err)
 
 	recordID := uuid.New()
-	err = s.storage.InsertRecord(ctx, recordID, userID, label, "note", "meta", []byte("data"), "key", 1, time.Now(), time.Now())
+	err = s.storage.InsertRecord(ctx, recordID, userID, label, "note", "meta", []byte("data"), "key", "", 1, time.Now(), time.Now())
 	s.Require().NoError(err)
 
 	s.Run("successful delete", func() {
@@ -323,7 +323,7 @@ func (s *StorageTestSuite) TestUpdateRecordByLabel() {
 	createdAt := time.Now()
 	updatedAt := time.Now()
 
-	err = s.storage.InsertRecord(ctx, recordID, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAt, updatedAt)
+	err = s.storage.InsertRecord(ctx, recordID, userID, label, recordType, metadata, encryptedData, fileKey, "", version, createdAt, updatedAt)
 	s.Require().NoError(err)
 
 	s.Run("successful update", func() {
@@ -332,7 +332,7 @@ func (s *StorageTestSuite) TestUpdateRecordByLabel() {
 		newEncryptedData := []byte("data2")
 		newFileKey := "key2"
 		newUpdatedAt := time.Now()
-		newVersion, err := s.storage.UpdateRecordByLabel(ctx, label, userID, newType, newMetadata, newEncryptedData, newFileKey, version, newUpdatedAt)
+		newVersion, err := s.storage.UpdateRecordByLabel(ctx, label, userID, newType, newMetadata, newEncryptedData, newFileKey, "", version, newUpdatedAt)
 		s.Require().NoError(err)
 		s.Require().Equal(version+1, newVersion)
 
@@ -347,14 +347,14 @@ func (s *StorageTestSuite) TestUpdateRecordByLabel() {
 
 	s.Run("version conflict", func() {
 		wrongVersion := 1 // Уже обновили до 2
-		_, err := s.storage.UpdateRecordByLabel(ctx, label, userID, recordType, metadata, encryptedData, fileKey, wrongVersion, time.Now())
+		_, err := s.storage.UpdateRecordByLabel(ctx, label, userID, recordType, metadata, encryptedData, fileKey, "", wrongVersion, time.Now())
 		s.Require().Error(err)
 		s.Require().Equal(models.ErrConflict, err)
 	})
 
 	s.Run("record not found", func() {
 		nonExistentLabel := "no-such-label"
-		_, err := s.storage.UpdateRecordByLabel(ctx, nonExistentLabel, userID, recordType, metadata, encryptedData, fileKey, 1, time.Now())
+		_, err := s.storage.UpdateRecordByLabel(ctx, nonExistentLabel, userID, recordType, metadata, encryptedData, fileKey, "", 1, time.Now())
 		s.Require().Error(err)
 		s.Require().Equal(models.ErrConflict, err)
 	})
@@ -363,7 +363,7 @@ func (s *StorageTestSuite) TestUpdateRecordByLabel() {
 		otherUserID := uuid.New()
 		_, err := s.storage.Register(ctx, otherUserID, "otheruser", passwordHash, salt)
 		s.Require().NoError(err)
-		_, err = s.storage.UpdateRecordByLabel(ctx, label, otherUserID, recordType, metadata, encryptedData, fileKey, 2, time.Now())
+		_, err = s.storage.UpdateRecordByLabel(ctx, label, otherUserID, recordType, metadata, encryptedData, fileKey, "", 2, time.Now())
 		s.Require().Error(err)
 		s.Require().Equal(models.ErrConflict, err)
 	})

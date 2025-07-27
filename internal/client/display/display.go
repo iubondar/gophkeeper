@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"gophkeeper/internal/models"
+	"strings"
 )
 
 // DisplayTextSecret отображает текстовый секрет
@@ -45,7 +46,14 @@ func DisplayCardData(secret *models.CardData, metadata string) {
 // DisplayFileData отображает данные файла
 func DisplayFileData(secret *models.FileData, metadata string) {
 	fmt.Printf("📁 Файл: %s\n", secret.Name)
-	fmt.Printf("   Путь: %s\n", secret.FilePath)
+
+	// Если FilePath содержит оригинальное имя файла (не полный путь), показываем его
+	if secret.FilePath != "" && !strings.Contains(secret.FilePath, "/") && !strings.Contains(secret.FilePath, "\\") {
+		fmt.Printf("   Имя файла: %s\n", secret.FilePath)
+	} else if secret.FilePath != "" {
+		fmt.Printf("   Путь: %s\n", secret.FilePath)
+	}
+
 	if metadata != "" {
 		fmt.Printf("   Метаданные: %s\n", metadata)
 	}

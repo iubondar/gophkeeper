@@ -47,7 +47,7 @@ func TestGetHandler_GetSecret(t *testing.T) {
 					Return(expectedOut, nil)
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"id":"test-id","label":"test-secret","type":"text","metadata":"test metadata","encrypted_data":"ZW5jcnlwdGVkLWRhdGE=","file_key":"","version":1}`,
+			expectedBody:   `{"id":"test-id","label":"test-secret","type":"text","metadata":"test metadata","encrypted_data":"ZW5jcnlwdGVkLWRhdGE=","file_key":"","file_name":"","version":1}`,
 		},
 		{
 			name:           "method not allowed",

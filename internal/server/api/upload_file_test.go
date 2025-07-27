@@ -65,7 +65,7 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 			Version: 1,
 		}
 		mockUsecase.EXPECT().
-			UploadFile(gomock.Any(), label, metadata, gomock.Any(), int64(len(content)), userID).
+			UploadFile(gomock.Any(), label, metadata, "test.txt", gomock.Any(), int64(len(content)), userID).
 			Return(expectedResult, nil)
 
 		// Выполняем запрос
@@ -180,7 +180,7 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		mockUsecase.EXPECT().
-			UploadFile(gomock.Any(), label, metadata, gomock.Any(), int64(len(content)), userID).
+			UploadFile(gomock.Any(), label, metadata, "test.txt", gomock.Any(), int64(len(content)), userID).
 			Return(models.UploadSecretOut{}, models.ErrConflict)
 
 		handler.UploadFile(w, req)
@@ -210,7 +210,7 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		mockUsecase.EXPECT().
-			UploadFile(gomock.Any(), label, metadata, gomock.Any(), int64(len(content)), userID).
+			UploadFile(gomock.Any(), label, metadata, "test.txt", gomock.Any(), int64(len(content)), userID).
 			Return(models.UploadSecretOut{}, assert.AnError)
 
 		handler.UploadFile(w, req)

@@ -63,7 +63,7 @@ func TestUploadSecretUsecase_UploadSecret(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := mocks.NewMockRecordRepository(ctrl)
 			mockRepo.EXPECT().
-				InsertRecord(gomock.Any(), gomock.Any(), tt.userID, tt.in.Label, tt.in.Type, tt.in.Metadata, gomock.Any(), tt.in.FileKey, 1, gomock.Any(), gomock.Any()).
+				InsertRecord(gomock.Any(), gomock.Any(), tt.userID, tt.in.Label, tt.in.Type, tt.in.Metadata, gomock.Any(), tt.in.FileKey, "", 1, gomock.Any(), gomock.Any()).
 				Return(tt.repoError)
 
 			uc := usecase.NewUploadSecretUsecase(mockRepo)

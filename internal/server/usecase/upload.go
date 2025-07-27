@@ -9,7 +9,7 @@ import (
 )
 
 type RecordRepository interface {
-	InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, version int, createdAt, updatedAt time.Time) error
+	InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, fileName string, version int, createdAt, updatedAt time.Time) error
 }
 
 type UploadSecretUsecase interface {
@@ -30,7 +30,7 @@ func (uc *uploadSecretUsecase) UploadSecret(ctx context.Context, in models.Uploa
 	updatedAt := time.Now()
 	version := 1 // всегда 1 для новой записи
 
-	err := uc.repo.InsertRecord(ctx, id, userID, in.Label, in.Type, in.Metadata, in.EncryptedData, in.FileKey, version, createdAt, updatedAt)
+	err := uc.repo.InsertRecord(ctx, id, userID, in.Label, in.Type, in.Metadata, in.EncryptedData, in.FileKey, "", version, createdAt, updatedAt)
 	if err != nil {
 		if err == models.ErrConflict {
 			return models.UploadSecretOut{}, models.ErrConflict

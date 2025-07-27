@@ -15,7 +15,7 @@ import (
 
 // UploadFileUsecase интерфейс для загрузки файлов
 type UploadFileUsecase interface {
-	UploadFile(ctx context.Context, label, metadata string, file io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error)
+	UploadFile(ctx context.Context, label, metadata, fileName string, file io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error)
 }
 
 type UploadFileHandler struct {
@@ -65,7 +65,7 @@ func (h *UploadFileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// Загружаем файл
-	result, err := h.uc.UploadFile(r.Context(), label, metadata, file, header.Size, userID)
+	result, err := h.uc.UploadFile(r.Context(), label, metadata, header.Filename, file, header.Size, userID)
 	if err != nil {
 		if err == models.ErrConflict {
 			models.EncodeError(w, "File with this label already exists", http.StatusConflict)

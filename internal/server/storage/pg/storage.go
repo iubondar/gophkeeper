@@ -80,10 +80,10 @@ func (s *Storage) GetUserByLoginAndPassword(ctx context.Context, login string, p
 	return userID, nil
 }
 
-func (s *Storage) InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, version int, createdAt, updatedAt time.Time) error {
+func (s *Storage) InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, fileName string, version int, createdAt, updatedAt time.Time) error {
 	createdAtNull := sql.NullTime{Valid: true, Time: createdAt}
 	updatedAtNull := sql.NullTime{Valid: true, Time: updatedAt}
-	_, err := s.db.ExecContext(ctx, queries.InsertRecord, id, userID, label, recordType, metadata, encryptedData, fileKey, version, createdAtNull, updatedAtNull)
+	_, err := s.db.ExecContext(ctx, queries.InsertRecord, id, userID, label, recordType, metadata, encryptedData, fileKey, fileName, version, createdAtNull, updatedAtNull)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -103,7 +103,7 @@ func (s *Storage) GetRecordByLabel(ctx context.Context, label string, userID uui
 	var createdAt, updatedAt sql.NullTime
 
 	err := s.db.QueryRowContext(ctx, queries.GetRecordByLabel, label, userID).Scan(
-		&id, &record.Label, &record.Type, &record.Metadata, &record.EncryptedData, &record.FileKey, &record.Version, &createdAt, &updatedAt,
+		&id, &record.Label, &record.Type, &record.Metadata, &record.EncryptedData, &record.FileKey, &record.FileName, &record.Version, &createdAt, &updatedAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -135,7 +135,7 @@ func (s *Storage) DeleteRecordByLabel(ctx context.Context, label string, userID 
 }
 
 // UpdateRecordByLabel обновляет запись с проверкой версии (OCC)
-func (s *Storage) UpdateRecordByLabel(ctx context.Context, label string, userID uuid.UUID, recordType, metadata string, encryptedData []byte, fileKey string, expectedVersion int, updatedAt time.Time) (int, error) {
+func (s *Storage) UpdateRecordByLabel(ctx context.Context, label string, userID uuid.UUID, recordType, metadata string, encryptedData []byte, fileKey string, fileName string, expectedVersion int, updatedAt time.Time) (int, error) {
 	result, err := s.db.ExecContext(
 		ctx,
 		queries.UpdateRecordByLabelAndVersion,
@@ -143,6 +143,7 @@ func (s *Storage) UpdateRecordByLabel(ctx context.Context, label string, userID 
 		metadata,
 		encryptedData,
 		fileKey,
+		fileName,
 		updatedAt,
 		label,
 		userID,
