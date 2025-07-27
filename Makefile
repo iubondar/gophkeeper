@@ -17,7 +17,7 @@ test:
 
 # Запуск сервера
 run-server: build-server
-	goose -dir ./internal/server/storage/migrations postgres "user=ibondar password=postgres dbname=gophkeeper sslmode=disable" up
+	goose -dir ./internal/server/storage/pg/migrations postgres "user=ibondar password=postgres dbname=gophkeeper sslmode=disable" up
 	./bin/gophkeeper-server
 
 # Запуск CLI клиента

@@ -10,15 +10,14 @@ import (
 
 type Config struct {
 	RunAddress       string `env:"RUN_ADDRESS"`
-	DatabaseURI      string `env:"DATABASE_URI"`
+	DatabaseHost     string `env:"DATABASE_HOST"`
 	DatabaseUser     string `env:"DATABASE_USER"`
 	DatabasePassword string `env:"DATABASE_PASSWORD"`
-	DatabaseHost     string `env:"DATABASE_HOST"`
 	DatabaseName     string `env:"DATABASE_NAME"`
 	DatabaseSSLMode  string `env:"DATABASE_SSL_MODE"`
 	MinioEndpoint    string `env:"MINIO_ENDPOINT"`
-	MinioAccessKey   string `env:"MINIO_ACCESS_KEY"`
-	MinioSecretKey   string `env:"MINIO_SECRET_KEY"`
+	MinioAccessKey   string `env:"MINIO_ACCESS_KEY_ID"`
+	MinioSecretKey   string `env:"MINIO_SECRET_ACCESS_KEY"`
 	MinioUseSSL      bool   `env:"MINIO_USE_SSL"`
 }
 
@@ -37,15 +36,14 @@ func NewConfig(progname string, args []string) (*Config, error) {
 	zap.L().Sugar().Debugln(
 		"Config: ",
 		"RunAddress", c.RunAddress,
-		"DatabaseURI", c.DatabaseURI,
 		"DatabaseUser", c.DatabaseUser,
 		"DatabasePassword", c.DatabasePassword,
 		"DatabaseHost", c.DatabaseHost,
 		"DatabaseName", c.DatabaseName,
 		"DatabaseSSLMode", c.DatabaseSSLMode,
 		"MinioEndpoint", c.MinioEndpoint,
-		"MinioAccessKey", c.MinioAccessKey,
-		"MinioSecretKey", c.MinioSecretKey,
+		"MinioAccessKeyID", c.MinioAccessKey,
+		"MinioSecretAccessKey", c.MinioSecretKey,
 		"MinioUseSSL", c.MinioUseSSL,
 	)
 

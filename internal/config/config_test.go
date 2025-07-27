@@ -23,15 +23,14 @@ func TestNewConfig_ValidEnvironment(t *testing.T) {
 
 	// Create .env file in the temporary directory
 	envContent := `RUN_ADDRESS=:8080
-DATABASE_URI=postgres://user:pass@localhost:5432/db
 DATABASE_USER=testuser
 DATABASE_PASSWORD=testpass
 DATABASE_HOST=localhost
 DATABASE_NAME=testdb
 DATABASE_SSL_MODE=disable
 MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
+MINIO_ACCESS_KEY_ID=minioadmin
+MINIO_SECRET_ACCESS_KEY=minioadmin
 MINIO_USE_SSL=false`
 
 	envFile := tmpDir + "/.env"
@@ -52,7 +51,6 @@ MINIO_USE_SSL=false`
 
 	// Verify configuration values
 	assert.Equal(t, ":8080", config.RunAddress)
-	assert.Equal(t, "postgres://user:pass@localhost:5432/db", config.DatabaseURI)
 	assert.Equal(t, "testuser", config.DatabaseUser)
 	assert.Equal(t, "testpass", config.DatabasePassword)
 	assert.Equal(t, "localhost", config.DatabaseHost)
@@ -90,15 +88,14 @@ func TestNewConfig_InvalidEnvFile(t *testing.T) {
 
 	// Create invalid .env file
 	envContent := `INVALID_ENV_FORMAT
-DATABASE_URI=postgres://user:pass@localhost:5432/db
 DATABASE_USER=testuser
 DATABASE_PASSWORD=testpass
 DATABASE_HOST=localhost
 DATABASE_NAME=testdb
 DATABASE_SSL_MODE=disable
 MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
+MINIO_ACCESS_KEY_ID=minioadmin
+MINIO_SECRET_ACCESS_KEY=minioadmin
 MINIO_USE_SSL=false`
 
 	envFile := tmpDir + "/.env"
@@ -172,14 +169,12 @@ func TestConfig_StructFields(t *testing.T) {
 	config := &Config{}
 
 	// Test database fields
-	config.DatabaseURI = "test-uri"
 	config.DatabaseUser = "test-user"
 	config.DatabasePassword = "test-password"
 	config.DatabaseHost = "test-host"
 	config.DatabaseName = "test-dbname"
 	config.DatabaseSSLMode = "test-sslmode"
 
-	assert.Equal(t, "test-uri", config.DatabaseURI)
 	assert.Equal(t, "test-user", config.DatabaseUser)
 	assert.Equal(t, "test-password", config.DatabasePassword)
 	assert.Equal(t, "test-host", config.DatabaseHost)
@@ -206,15 +201,14 @@ func TestNewConfig_WithCommandLineArgs(t *testing.T) {
 
 	// Create .env file in the temporary directory
 	envContent := `RUN_ADDRESS=:8080
-DATABASE_URI=postgres://user:pass@localhost:5432/db
 DATABASE_USER=testuser
 DATABASE_PASSWORD=testpass
 DATABASE_HOST=localhost
 DATABASE_NAME=testdb
 DATABASE_SSL_MODE=disable
 MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
+MINIO_ACCESS_KEY_ID=minioadmin
+MINIO_SECRET_ACCESS_KEY=minioadmin
 MINIO_USE_SSL=false`
 
 	envFile := tmpDir + "/.env"
