@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -75,29 +76,7 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 		}
 
 	case *models.FileData:
-		// Для файлов используем специальную логику загрузки
-		// Нормализуем путь к файлу (расширяем символ ~ и другие преобразования)
-		normalizedPath, err := os_utils.NormalizeFilePath(data.FilePath)
-		if err != nil {
-			return nil, fmt.Errorf("ошибка при обработке пути к файлу: %w", err)
-		}
-
-		file, err := os.Open(normalizedPath)
-		if err != nil {
-			return nil, fmt.Errorf("ошибка при открытии файла: %w", err)
-		}
-		defer file.Close()
-
-		// Получаем оригинальное имя файла из пути
-		originalName := filepath.Base(data.FilePath)
-
-		// Загружаем файл через специальный API
-		result, err := c.apiClient.UploadFile(ctx, data.Name, data.Metadata, file, originalName)
-		if err != nil {
-			return nil, fmt.Errorf("ошибка при загрузке файла: %w", err)
-		}
-
-		return result, nil
+		return c.handleFileUpload(ctx, data)
 
 	default:
 		return nil, fmt.Errorf("неподдерживаемый тип данных для загрузки")
@@ -124,6 +103,53 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 	}
 
 	return nil, nil
+}
+
+// handleFileUpload обрабатывает загрузку файла
+func (c *UploadCommand) handleFileUpload(ctx context.Context, data *models.FileData) (any, error) {
+	// Нормализуем путь к файлу (расширяем символ ~ и другие преобразования)
+	normalizedPath, err := os_utils.NormalizeFilePath(data.FilePath)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при обработке пути к файлу: %w", err)
+	}
+
+	file, err := os.Open(normalizedPath)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при открытии файла: %w", err)
+	}
+	defer file.Close()
+
+	// Получаем оригинальное имя файла из пути
+	originalName := filepath.Base(data.FilePath)
+
+	// Создаем буфер для зашифрованных данных
+	var encryptedBuffer bytes.Buffer
+
+	// Создаем потоковый шифратор
+	encryptWriter, err := c.crypto.EncryptStream(&encryptedBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при создании шифратора: %w", err)
+	}
+	defer encryptWriter.Close()
+
+	// Копируем и шифруем файл
+	_, err = io.Copy(encryptWriter, file)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при шифровании файла: %w", err)
+	}
+
+	// Закрываем шифратор для завершения процесса
+	if err := encryptWriter.Close(); err != nil {
+		return nil, fmt.Errorf("ошибка при завершении шифрования: %w", err)
+	}
+
+	// Загружаем зашифрованный файл через специальный API
+	result, err := c.apiClient.UploadFile(ctx, data.Name, data.Metadata, &encryptedBuffer, originalName)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при загрузке зашифрованного файла: %w", err)
+	}
+
+	return result, nil
 }
 
 // GetName возвращает имя команды

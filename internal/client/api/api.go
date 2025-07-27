@@ -255,7 +255,7 @@ func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
 	return nil
 }
 
-// UploadFile загружает файл на сервер
+// UploadFile загружает зашифрованный файл на сервер
 func (c *APIClient) UploadFile(ctx context.Context, label, metadata string, file io.Reader, filename string) (*models.UploadSecretOut, error) {
 	request := c.httpc.R().
 		SetContext(ctx).
@@ -287,10 +287,11 @@ func (c *APIClient) UploadFile(ctx context.Context, label, metadata string, file
 	return &out, nil
 }
 
-// DownloadFile скачивает файл с сервера
+// DownloadFile скачивает зашифрованный файл с сервера
 func (c *APIClient) DownloadFile(ctx context.Context, label string) (io.ReadCloser, error) {
 	request := c.httpc.R().
-		SetContext(ctx)
+		SetContext(ctx).
+		SetQueryParam("label", label)
 
 	if err := c.setAuthCookie(request); err != nil {
 		return nil, err

@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // GetSecretResult представляет результат выполнения команды get
@@ -55,7 +54,7 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Для файлов используем специальную логику скачивания
 	// Файлы не шифруются в EncryptedData, а хранятся в файловом хранилище
 	if secret.Type == models.SecretTypeFile {
-		return handleFileDownload(c.apiClient, secret.Label, secret.Metadata, secret.FileName)
+		return handleFileDownload(c.apiClient, c.crypto, secret.Label, secret.Metadata, secret.FileName)
 	}
 
 	// Расшифровываем данные секрета для всех остальных типов
@@ -128,13 +127,29 @@ func handleCardSecret(decryptedData string, metadata string) (*GetSecretResult, 
 	}, nil
 }
 
-func handleFileDownload(apiClient GetAPIClient, label, metadata, fileName string) (*GetSecretResult, error) {
+func handleFileDownload(apiClient GetAPIClient, crypto *crypto.Crypto, label, metadata, fileName string) (*GetSecretResult, error) {
 	// Скачиваем файл с сервера
 	reader, err := apiClient.DownloadFile(context.Background(), label)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при скачивании файла: %w", err)
 	}
 	defer reader.Close()
+
+	// Проверяем, является ли файл зашифрованным (по метаданным или другим признакам)
+	// Пока что будем считать все файлы зашифрованными для безопасности
+	isEncrypted := true
+
+	var decryptedReader io.ReadCloser
+	if isEncrypted {
+		// Создаем потоковый дешифратор
+		decryptedReader, err = crypto.DecryptStream(reader)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при создании дешифратора: %w", err)
+		}
+		defer decryptedReader.Close()
+	} else {
+		decryptedReader = reader
+	}
 
 	// Получаем путь к папке загрузок
 	downloadsDir, err := os_utils.GetDownloadsDir()
@@ -151,18 +166,10 @@ func handleFileDownload(apiClient GetAPIClient, label, metadata, fileName string
 	// Создаем путь для сохранения файла с оригинальным именем
 	filePath := filepath.Join(downloadsDir, originalName)
 
-	// Проверяем, существует ли файл с таким именем, и если да, добавляем номер
-	counter := 1
-	originalFilePath := filePath
-	for {
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			break
-		}
-		// Файл существует, добавляем номер
-		ext := filepath.Ext(originalFilePath)
-		nameWithoutExt := strings.TrimSuffix(originalFilePath, ext)
-		filePath = fmt.Sprintf("%s_%d%s", nameWithoutExt, counter, ext)
-		counter++
+	// Генерируем уникальное имя файла
+	filePath, err = os_utils.GenerateUniqueFilePath(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при генерации уникального имени файла: %w", err)
 	}
 
 	// Создаем файл для записи
@@ -172,8 +179,8 @@ func handleFileDownload(apiClient GetAPIClient, label, metadata, fileName string
 	}
 	defer file.Close()
 
-	// Копируем данные из reader в файл
-	_, err = io.Copy(file, reader)
+	// Копируем данные из reader в файл (расшифрованные, если файл был зашифрован)
+	_, err = io.Copy(file, decryptedReader)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при записи файла: %w", err)
 	}

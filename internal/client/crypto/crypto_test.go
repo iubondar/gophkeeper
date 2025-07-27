@@ -1,9 +1,13 @@
 package crypto
 
 import (
+	"bytes"
+	"crypto/aes"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGeneratePasswordHash_Deterministic(t *testing.T) {
@@ -243,4 +247,143 @@ func TestGenerateAndStoreEncryptionKey_Base64Issue(t *testing.T) {
 	decrypted, err := crypto.DecryptString(encrypted)
 	assert.NoError(t, err)
 	assert.Equal(t, testData, decrypted)
+}
+
+func TestStreamEncryptionDecryption(t *testing.T) {
+	crypto := NewCrypto()
+	// Генерируем корректную соль в base64
+	crypto.GenerateAndSetSalt()
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Тестовые данные
+	originalData := []byte("Это тестовые данные для потокового шифрования. " +
+		"Они должны быть корректно зашифрованы и расшифрованы. " +
+		"Потоковое шифрование позволяет обрабатывать большие файлы без загрузки их в память целиком.")
+
+	// Создаем буфер для зашифрованных данных
+	var encryptedBuffer bytes.Buffer
+
+	// Создаем потоковый шифратор
+	encryptWriter, err := crypto.EncryptStream(&encryptedBuffer)
+	require.NoError(t, err)
+
+	// Записываем данные через шифратор
+	_, err = encryptWriter.Write(originalData)
+	require.NoError(t, err)
+
+	// Закрываем шифратор
+	err = encryptWriter.Close()
+	require.NoError(t, err)
+
+	// Проверяем, что данные зашифрованы (не равны оригиналу)
+	encryptedData := encryptedBuffer.Bytes()
+	require.NotEqual(t, originalData, encryptedData)
+	require.Greater(t, len(encryptedData), len(originalData)) // Должен быть IV в начале
+
+	// Создаем потоковый дешифратор
+	decryptReader, err := crypto.DecryptStream(bytes.NewReader(encryptedData))
+	require.NoError(t, err)
+	defer decryptReader.Close()
+
+	// Читаем и расшифровываем данные
+	decryptedData := make([]byte, len(originalData))
+	n, err := decryptReader.Read(decryptedData)
+	require.NoError(t, err)
+	require.Equal(t, len(originalData), n)
+
+	// Проверяем, что расшифрованные данные совпадают с оригиналом
+	require.Equal(t, originalData, decryptedData)
+}
+
+func TestStreamEncryptionLargeData(t *testing.T) {
+	crypto := NewCrypto()
+	// Генерируем корректную соль в base64
+	crypto.GenerateAndSetSalt()
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Создаем большие тестовые данные (1MB)
+	originalData := make([]byte, 1024*1024)
+	for i := range originalData {
+		originalData[i] = byte(i % 256)
+	}
+
+	// Создаем буфер для зашифрованных данных
+	var encryptedBuffer bytes.Buffer
+
+	// Создаем потоковый шифратор
+	encryptWriter, err := crypto.EncryptStream(&encryptedBuffer)
+	require.NoError(t, err)
+
+	// Записываем данные блоками
+	blockSize := 4096
+	for i := 0; i < len(originalData); i += blockSize {
+		end := i + blockSize
+		if end > len(originalData) {
+			end = len(originalData)
+		}
+		_, err = encryptWriter.Write(originalData[i:end])
+		require.NoError(t, err)
+	}
+
+	// Закрываем шифратор
+	err = encryptWriter.Close()
+	require.NoError(t, err)
+
+	// Создаем потоковый дешифратор
+	decryptReader, err := crypto.DecryptStream(bytes.NewReader(encryptedBuffer.Bytes()))
+	require.NoError(t, err)
+	defer decryptReader.Close()
+
+	// Читаем и расшифровываем данные блоками
+	decryptedData := make([]byte, len(originalData))
+	totalRead := 0
+	for totalRead < len(originalData) {
+		n, err := decryptReader.Read(decryptedData[totalRead:])
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		totalRead += n
+	}
+
+	// Проверяем, что все данные прочитаны и расшифрованы корректно
+	require.Equal(t, len(originalData), totalRead)
+	require.Equal(t, originalData, decryptedData)
+}
+
+func TestStreamEncryptionEmptyData(t *testing.T) {
+	crypto := NewCrypto()
+	// Генерируем корректную соль в base64
+	crypto.GenerateAndSetSalt()
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Тестируем с пустыми данными
+	originalData := []byte{}
+
+	var encryptedBuffer bytes.Buffer
+	encryptWriter, err := crypto.EncryptStream(&encryptedBuffer)
+	require.NoError(t, err)
+
+	_, err = encryptWriter.Write(originalData)
+	require.NoError(t, err)
+
+	err = encryptWriter.Close()
+	require.NoError(t, err)
+
+	// Проверяем, что создан только IV
+	encryptedData := encryptedBuffer.Bytes()
+	require.Equal(t, aes.BlockSize, len(encryptedData))
+
+	// Расшифровываем
+	decryptReader, err := crypto.DecryptStream(bytes.NewReader(encryptedData))
+	require.NoError(t, err)
+	defer decryptReader.Close()
+
+	decryptedData := make([]byte, 1)
+	n, err := decryptReader.Read(decryptedData)
+	require.Equal(t, io.EOF, err)
+	require.Equal(t, 0, n)
 }

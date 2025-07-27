@@ -156,3 +156,102 @@ func TestGetDownloadsDir_CreatesDirectory(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, stat.IsDir())
 }
+
+func TestGenerateUniqueFilePath(t *testing.T) {
+	// Создаем временную директорию для тестов
+	tempDir, err := os.MkdirTemp("", "test_unique_file")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	tests := []struct {
+		name           string
+		existingFiles  []string
+		requestedPath  string
+		expectedResult string
+	}{
+		{
+			name:           "файл не существует",
+			existingFiles:  []string{},
+			requestedPath:  filepath.Join(tempDir, "test.txt"),
+			expectedResult: filepath.Join(tempDir, "test.txt"),
+		},
+		{
+			name:           "файл существует, добавляем номер",
+			existingFiles:  []string{"test.txt"},
+			requestedPath:  filepath.Join(tempDir, "test.txt"),
+			expectedResult: filepath.Join(tempDir, "test_1.txt"),
+		},
+		{
+			name:           "несколько файлов с похожими именами",
+			existingFiles:  []string{"test.txt", "test_1.txt"},
+			requestedPath:  filepath.Join(tempDir, "test.txt"),
+			expectedResult: filepath.Join(tempDir, "test_2.txt"),
+		},
+		{
+			name:           "файл без расширения",
+			existingFiles:  []string{"testfile"},
+			requestedPath:  filepath.Join(tempDir, "testfile"),
+			expectedResult: filepath.Join(tempDir, "testfile_1"),
+		},
+		{
+			name:           "файл с точкой в имени",
+			existingFiles:  []string{"test.file.txt"},
+			requestedPath:  filepath.Join(tempDir, "test.file.txt"),
+			expectedResult: filepath.Join(tempDir, "test.file_1.txt"),
+		},
+		{
+			name:           "файл с несколькими точками",
+			existingFiles:  []string{"test.backup.txt"},
+			requestedPath:  filepath.Join(tempDir, "test.backup.txt"),
+			expectedResult: filepath.Join(tempDir, "test.backup_1.txt"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Создаем существующие файлы
+			for _, fileName := range tt.existingFiles {
+				filePath := filepath.Join(tempDir, fileName)
+				err := os.WriteFile(filePath, []byte("test content"), 0644)
+				require.NoError(t, err)
+			}
+
+			// Вызываем функцию
+			result, err := GenerateUniqueFilePath(tt.requestedPath)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, result)
+
+			// Проверяем, что файл с таким именем не существует
+			_, err = os.Stat(result)
+			assert.True(t, os.IsNotExist(err), "Файл с результатом не должен существовать")
+		})
+	}
+}
+
+func TestGenerateUniqueFilePath_WithRealFiles(t *testing.T) {
+	// Создаем временную директорию
+	tempDir, err := os.MkdirTemp("", "test_real_files")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	// Создаем несколько файлов
+	files := []string{"document.pdf", "document_1.pdf", "document_2.pdf"}
+	for _, fileName := range files {
+		filePath := filepath.Join(tempDir, fileName)
+		err := os.WriteFile(filePath, []byte("content"), 0644)
+		require.NoError(t, err)
+	}
+
+	// Пытаемся создать файл с именем "document.pdf"
+	requestedPath := filepath.Join(tempDir, "document.pdf")
+	result, err := GenerateUniqueFilePath(requestedPath)
+	require.NoError(t, err)
+
+	// Ожидаем "document_3.pdf"
+	expectedPath := filepath.Join(tempDir, "document_3.pdf")
+	assert.Equal(t, expectedPath, result)
+
+	// Проверяем, что файл с таким именем действительно не существует
+	_, err = os.Stat(result)
+	assert.True(t, os.IsNotExist(err))
+}

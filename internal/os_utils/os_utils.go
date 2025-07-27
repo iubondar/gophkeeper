@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -104,4 +105,24 @@ func GetDownloadsDir() (string, error) {
 	}
 
 	return downloadsDir, nil
+}
+
+// GenerateUniqueFilePath генерирует уникальный путь к файлу, добавляя номер к имени файла,
+// если файл с таким именем уже существует
+func GenerateUniqueFilePath(filePath string) (string, error) {
+	// Проверяем, существует ли файл с таким именем, и если да, добавляем номер
+	counter := 1
+	originalFilePath := filePath
+	for {
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			break
+		}
+		// Файл существует, добавляем номер
+		ext := filepath.Ext(originalFilePath)
+		nameWithoutExt := strings.TrimSuffix(originalFilePath, ext)
+		filePath = strings.Join([]string{nameWithoutExt, "_", strconv.Itoa(counter), ext}, "")
+		counter++
+	}
+
+	return filePath, nil
 }

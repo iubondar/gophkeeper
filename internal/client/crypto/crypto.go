@@ -161,3 +161,103 @@ func (c *Crypto) DecryptString(encryptedData []byte) (string, error) {
 
 	return string(plaintext), nil
 }
+
+// EncryptStream создает потоковый шифратор для файлов
+func (c *Crypto) EncryptStream(writer io.Writer) (io.WriteCloser, error) {
+	if c.encryptionKey == nil {
+		return nil, errors.New("encryption key is not set")
+	}
+
+	block, err := aes.NewCipher(c.encryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("new cipher: %w", err)
+	}
+
+	// Используем CTR режим для потокового шифрования
+	iv := make([]byte, aes.BlockSize)
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, fmt.Errorf("generate IV: %w", err)
+	}
+
+	// Записываем IV в начало потока
+	if _, err := writer.Write(iv); err != nil {
+		return nil, fmt.Errorf("write IV: %w", err)
+	}
+
+	stream := cipher.NewCTR(block, iv)
+
+	return &encryptWriter{
+		stream: stream,
+		writer: writer,
+	}, nil
+}
+
+// DecryptStream создает потоковый дешифратор для файлов
+func (c *Crypto) DecryptStream(reader io.Reader) (io.ReadCloser, error) {
+	if c.encryptionKey == nil {
+		return nil, errors.New("encryption key is not set")
+	}
+
+	block, err := aes.NewCipher(c.encryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("new cipher: %w", err)
+	}
+
+	// Читаем IV из начала потока
+	iv := make([]byte, aes.BlockSize)
+	if _, err := io.ReadFull(reader, iv); err != nil {
+		return nil, fmt.Errorf("read IV: %w", err)
+	}
+
+	stream := cipher.NewCTR(block, iv)
+
+	return &decryptReader{
+		stream: stream,
+		reader: reader,
+	}, nil
+}
+
+// encryptWriter реализует потоковое шифрование
+type encryptWriter struct {
+	stream cipher.Stream
+	writer io.Writer
+}
+
+func (ew *encryptWriter) Write(p []byte) (n int, err error) {
+	// Создаем буфер для зашифрованных данных
+	ciphertext := make([]byte, len(p))
+	ew.stream.XORKeyStream(ciphertext, p)
+
+	_, err = ew.writer.Write(ciphertext)
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+func (ew *encryptWriter) Close() error {
+	return nil
+}
+
+// decryptReader реализует потоковое дешифрование
+type decryptReader struct {
+	stream cipher.Stream
+	reader io.Reader
+}
+
+func (dr *decryptReader) Read(p []byte) (n int, err error) {
+	// Читаем зашифрованные данные
+	n, err = dr.reader.Read(p)
+	if err != nil {
+		return n, err
+	}
+
+	// Расшифровываем данные на месте
+	dr.stream.XORKeyStream(p[:n], p[:n])
+
+	return n, nil
+}
+
+func (dr *decryptReader) Close() error {
+	return nil
+}
