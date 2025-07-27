@@ -75,11 +75,11 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
-		var response map[string]interface{}
+		var response models.UploadSecretOut
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
-		assert.Equal(t, expectedResult.ID, response["id"])
-		assert.Equal(t, float64(expectedResult.Version), response["version"])
+		assert.Equal(t, expectedResult.ID, response.ID)
+		assert.Equal(t, expectedResult.Version, response.Version)
 	})
 
 	t.Run("wrong HTTP method", func(t *testing.T) {

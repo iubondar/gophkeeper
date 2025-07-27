@@ -80,13 +80,7 @@ func (h *UploadFileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	// TODO: переделать на структуру
-	response := map[string]any{
-		"id":      result.ID,
-		"version": result.Version,
-	}
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if err := json.NewEncoder(w).Encode(result); err != nil {
 		zap.L().Sugar().Debugln("Failed to encode response", zap.Error(err))
 		models.EncodeError(w, "Failed to encode response", http.StatusInternalServerError)
 		return
