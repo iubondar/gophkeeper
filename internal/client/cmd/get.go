@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
+	"gophkeeper/internal/os_utils"
 	"io"
 	"os"
 	"path/filepath"
@@ -144,7 +145,7 @@ func handleFileDownload(apiClient GetAPIClient, label, metadata string) (*GetSec
 	defer reader.Close()
 
 	// Получаем путь к папке загрузок
-	downloadsDir, err := getDownloadsDir()
+	downloadsDir, err := os_utils.GetDownloadsDir()
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при получении пути к папке загрузок: %w", err)
 	}
@@ -177,24 +178,4 @@ func handleFileDownload(apiClient GetAPIClient, label, metadata string) (*GetSec
 		Data:     fileData,
 		Metadata: metadata,
 	}, nil
-}
-
-// getDownloadsDir возвращает путь к папке загрузок пользователя
-func getDownloadsDir() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	downloadsDir := filepath.Join(homeDir, "Downloads")
-
-	// Создаем папку, если она не существует
-	if _, err := os.Stat(downloadsDir); os.IsNotExist(err) {
-		err = os.MkdirAll(downloadsDir, 0755)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	return downloadsDir, nil
 }
