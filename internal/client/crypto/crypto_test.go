@@ -3,12 +3,40 @@ package crypto
 import (
 	"bytes"
 	"crypto/aes"
+	"fmt"
 	"io"
+	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Вспомогательные структуры для тестирования ошибок
+
+type errorWriter struct {
+	errorOnWrite bool
+	writeCount   int
+}
+
+func (ew *errorWriter) Write(p []byte) (n int, err error) {
+	ew.writeCount++
+	if ew.writeCount == 1 {
+		// Первая запись - это IV, пропускаем
+		return len(p), nil
+	}
+	if ew.errorOnWrite {
+		return 0, fmt.Errorf("write error")
+	}
+	return len(p), nil
+}
+
+type errorReader struct{}
+
+func (er *errorReader) Read(p []byte) (n int, err error) {
+	return 0, fmt.Errorf("read IV error")
+}
 
 func TestGeneratePasswordHash_Deterministic(t *testing.T) {
 	crypto := NewCrypto()
@@ -386,4 +414,213 @@ func TestStreamEncryptionEmptyData(t *testing.T) {
 	n, err := decryptReader.Read(decryptedData)
 	require.Equal(t, io.EOF, err)
 	require.Equal(t, 0, n)
+}
+
+// Тесты для покрытия ошибок
+
+func TestCalcArgon2Hash_InvalidSalt(t *testing.T) {
+	crypto := NewCrypto()
+
+	// Тестируем с некорректной солью (не base64)
+	_, err := crypto.calcArgon2Hash("password", "invalid-salt-not-base64")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "illegal base64")
+}
+
+func TestCalcArgon2Key_InvalidSalt(t *testing.T) {
+	crypto := NewCrypto()
+
+	// Тестируем с некорректной солью (не base64)
+	_, err := crypto.calcArgon2Key("password", "invalid-salt-not-base64")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "illegal base64")
+}
+
+func TestVerifyPasswordHash_InvalidSalt(t *testing.T) {
+	crypto := NewCrypto()
+
+	// Тестируем с некорректной солью
+	_, err := crypto.VerifyPasswordHash("password", "invalid-salt", "hash")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "illegal base64")
+}
+
+func TestGenerateAndStoreEncryptionKey_NoSalt(t *testing.T) {
+	crypto := NewCrypto()
+	// Не устанавливаем соль
+
+	err := crypto.GenerateAndStoreEncryptionKey("password")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "salt is not set")
+}
+
+func TestGenerateAndStoreEncryptionKey_InvalidSalt(t *testing.T) {
+	crypto := NewCrypto()
+	crypto.SetSalt("invalid-salt-not-base64")
+
+	err := crypto.GenerateAndStoreEncryptionKey("password")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid salt format")
+}
+
+func TestEncryptString_NoEncryptionKey(t *testing.T) {
+	crypto := NewCrypto()
+	// Не устанавливаем ключ шифрования
+
+	_, err := crypto.EncryptString("test data")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "encryption key is not set")
+}
+
+func TestDecryptString_NoEncryptionKey(t *testing.T) {
+	crypto := NewCrypto()
+	// Не устанавливаем ключ шифрования
+
+	_, err := crypto.DecryptString([]byte("test data"))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "encryption key is not set")
+}
+
+func TestEncryptStream_NoEncryptionKey(t *testing.T) {
+	crypto := NewCrypto()
+	// Не устанавливаем ключ шифрования
+
+	var buf bytes.Buffer
+	_, err := crypto.EncryptStream(&buf)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "encryption key is not set")
+}
+
+func TestDecryptStream_NoEncryptionKey(t *testing.T) {
+	crypto := NewCrypto()
+	// Не устанавливаем ключ шифрования
+
+	_, err := crypto.DecryptStream(bytes.NewReader([]byte("test data")))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "encryption key is not set")
+}
+
+func TestDecryptString_InvalidData(t *testing.T) {
+	crypto := NewCrypto()
+	crypto.SetSalt("dGVzdC1zYWx0")
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Тестируем с данными слишком короткими для nonce
+	_, err = crypto.DecryptString([]byte("short"))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid encrypted data")
+}
+
+func TestDecryptString_CorruptedData(t *testing.T) {
+	crypto := NewCrypto()
+	crypto.SetSalt("dGVzdC1zYWx0")
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Создаем некорректные данные с правильной длиной nonce, но испорченным ciphertext
+	nonce := make([]byte, 12) // GCM nonce size
+	rand.Read(nonce)
+	corruptedData := append(nonce, []byte("corrupted-ciphertext")...)
+
+	_, err = crypto.DecryptString(corruptedData)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "decrypt")
+}
+
+func TestDecryptStream_ReadError(t *testing.T) {
+	crypto := NewCrypto()
+	crypto.GenerateAndSetSalt()
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Создаем reader, который всегда возвращает ошибку
+	errorReader := &errorReader{}
+
+	_, err = crypto.DecryptStream(errorReader)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "read IV")
+}
+
+func TestDecryptReader_Close(t *testing.T) {
+	dr := &decryptReader{
+		stream: nil,
+		reader: &bytes.Buffer{},
+	}
+
+	// Close должен работать без ошибок
+	err := dr.Close()
+	assert.NoError(t, err)
+}
+
+func TestStreamEncryptionWithErrors(t *testing.T) {
+	crypto := NewCrypto()
+	crypto.GenerateAndSetSalt()
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Тестируем с данными, которые вызывают ошибки при записи
+	errorWriter := &errorWriter{errorOnWrite: true}
+
+	// Сначала создаем поток (IV записывается здесь)
+	encryptWriter, err := crypto.EncryptStream(errorWriter)
+	require.NoError(t, err)
+
+	// Попытка записи должна вернуть ошибку
+	_, err = encryptWriter.Write([]byte("test data"))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "write error")
+
+	// Close должен работать
+	err = encryptWriter.Close()
+	assert.NoError(t, err)
+}
+
+func TestStreamDecryptionWithErrors(t *testing.T) {
+	crypto := NewCrypto()
+	crypto.GenerateAndSetSalt()
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Создаем reader, который возвращает ошибку при чтении
+	errorReader := &errorReader{}
+
+	_, err = crypto.DecryptStream(errorReader)
+	assert.Error(t, err)
+}
+
+func TestEncryptString_WithLargeData(t *testing.T) {
+	crypto := NewCrypto()
+	crypto.SetSalt("dGVzdC1zYWx0")
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Создаем большие данные
+	largeData := strings.Repeat("test data ", 1000)
+
+	encrypted, err := crypto.EncryptString(largeData)
+	assert.NoError(t, err)
+	assert.NotEqual(t, largeData, string(encrypted))
+
+	decrypted, err := crypto.DecryptString(encrypted)
+	assert.NoError(t, err)
+	assert.Equal(t, largeData, decrypted)
+}
+
+func TestEncryptString_WithSpecialCharacters(t *testing.T) {
+	crypto := NewCrypto()
+	crypto.SetSalt("dGVzdC1zYWx0")
+	err := crypto.GenerateAndStoreEncryptionKey("test-password")
+	require.NoError(t, err)
+
+	// Тестируем с специальными символами
+	specialData := "Привет мир! 🌍 你好世界! Hello World! 1234567890 !@#$%^&*()_+-=[]{}|;':\",./<>?"
+
+	encrypted, err := crypto.EncryptString(specialData)
+	assert.NoError(t, err)
+	assert.NotEqual(t, specialData, string(encrypted))
+
+	decrypted, err := crypto.DecryptString(encrypted)
+	assert.NoError(t, err)
+	assert.Equal(t, specialData, decrypted)
 }
