@@ -40,3 +40,7 @@ clean:
 # Создание директории bin
 bin:
 	mkdir -p bin 
+
+# Подсчет строк кода
+loc:
+   	cloc . --exclude-dir=.git,bin,certs,static,docs
