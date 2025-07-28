@@ -1,3 +1,6 @@
+// Package input предоставляет функции для обработки пользовательского ввода.
+// Включает методы для получения различных типов данных секретов,
+// валидации ввода и интерактивных подсказок.
 package input
 
 import (
@@ -5,21 +8,32 @@ import (
 	"gophkeeper/internal/validators"
 )
 
-// InputHandler обрабатывает пользовательский ввод
+// InputHandler обрабатывает пользовательский ввод для различных типов секретов.
+// Предоставляет методы для получения данных от пользователя с валидацией.
 type InputHandler struct{}
 
-// NewInputHandler создает новый обработчик ввода
+// NewInputHandler создает новый обработчик пользовательского ввода.
+//
+// Возвращает:
+//   - *InputHandler: новый экземпляр обработчика ввода
 func NewInputHandler() *InputHandler {
 	return &InputHandler{}
 }
 
-// GetUserChoice получает выбор пользователя
+// GetUserChoice получает выбор пользователя из консоли.
+//
+// Возвращает:
+//   - string: выбор пользователя
 func (h *InputHandler) GetUserChoice() string {
 	input, _ := readLine()
 	return input
 }
 
-// GetUserCredentials получает логин и пароль от пользователя
+// GetUserCredentials получает логин и пароль от пользователя с валидацией.
+//
+// Возвращает:
+//   - *models.UserCredentials: данные пользователя
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetUserCredentials() (*models.UserCredentials, error) {
 	promptLogin()
 	login, err := readLine()
@@ -42,11 +56,21 @@ func (h *InputHandler) GetUserCredentials() (*models.UserCredentials, error) {
 	return credentials, nil
 }
 
+// GetLoginCredentials получает логин и пароль для входа в систему.
+// Алиас для GetUserCredentials для совместимости.
+//
+// Возвращает:
+//   - *models.UserCredentials: данные пользователя
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetLoginCredentials() (*models.UserCredentials, error) {
 	return h.GetUserCredentials()
 }
 
-// getSecretName получает название секрета
+// getSecretName получает название секрета от пользователя с валидацией.
+//
+// Возвращает:
+//   - string: название секрета
+//   - error: ошибка в случае неудачи или невалидного названия
 func (h *InputHandler) getSecretName() (string, error) {
 	promptSecretName()
 	name, err := readLine()
@@ -61,7 +85,11 @@ func (h *InputHandler) getSecretName() (string, error) {
 	return name, nil
 }
 
-// getMetadata получает метаданные
+// getMetadata получает метаданные секрета от пользователя.
+//
+// Возвращает:
+//   - string: метаданные секрета
+//   - error: ошибка в случае неудачи
 func (h *InputHandler) getMetadata() (string, error) {
 	promptMetadata()
 	metadata, err := readLine()
@@ -71,7 +99,15 @@ func (h *InputHandler) getMetadata() (string, error) {
 	return metadata, nil
 }
 
-// getTextData получает текстовые данные (базовый или обновленный)
+// getTextData получает текстовые данные секрета (базовый или обновленный).
+//
+// Параметры:
+//   - name: название секрета
+//   - isUpdate: true для обновления, false для создания
+//
+// Возвращает:
+//   - *models.TextSecretData: данные текстового секрета
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) getTextData(name string, isUpdate bool) (*models.TextSecretData, error) {
 	if isUpdate {
 		promptUpdateTextSecret()
@@ -102,7 +138,15 @@ func (h *InputHandler) getTextData(name string, isUpdate bool) (*models.TextSecr
 	return data, nil
 }
 
-// getLoginPasswordData получает данные логин/пароль (базовый или обновленный)
+// getLoginPasswordData получает данные логин/пароль (базовый или обновленный).
+//
+// Параметры:
+//   - name: название секрета
+//   - isUpdate: true для обновления, false для создания
+//
+// Возвращает:
+//   - *models.LoginPasswordData: данные логина и пароля
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) getLoginPasswordData(name string, isUpdate bool) (*models.LoginPasswordData, error) {
 	if isUpdate {
 		promptUpdateLogin()
@@ -154,7 +198,15 @@ func (h *InputHandler) getLoginPasswordData(name string, isUpdate bool) (*models
 	return data, nil
 }
 
-// getCardData получает данные карты (базовый или обновленный)
+// getCardData получает данные банковской карты (базовый или обновленный).
+//
+// Параметры:
+//   - name: название секрета
+//   - isUpdate: true для обновления, false для создания
+//
+// Возвращает:
+//   - *models.CardData: данные банковской карты
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) getCardData(name string, isUpdate bool) (*models.CardData, error) {
 	if isUpdate {
 		promptUpdateCardNumber()
@@ -217,7 +269,15 @@ func (h *InputHandler) getCardData(name string, isUpdate bool) (*models.CardData
 	return data, nil
 }
 
-// getFileData получает файловые данные (базовый или обновленный)
+// getFileData получает файловые данные (базовый или обновленный).
+//
+// Параметры:
+//   - name: название секрета
+//   - isUpdate: true для обновления, false для создания
+//
+// Возвращает:
+//   - *models.FileData: данные файла
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) getFileData(name string, isUpdate bool) (*models.FileData, error) {
 	if isUpdate {
 		promptUpdateFilePath()
@@ -248,6 +308,12 @@ func (h *InputHandler) getFileData(name string, isUpdate bool) (*models.FileData
 }
 
 // Публичные методы для базового ввода данных
+
+// GetTextData получает данные текстового секрета от пользователя.
+//
+// Возвращает:
+//   - *models.TextSecretData: данные текстового секрета
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetTextData() (*models.TextSecretData, error) {
 	name, err := h.getSecretName()
 	if err != nil {
@@ -256,6 +322,11 @@ func (h *InputHandler) GetTextData() (*models.TextSecretData, error) {
 	return h.getTextData(name, false)
 }
 
+// GetLoginPasswordData получает данные логина и пароля от пользователя.
+//
+// Возвращает:
+//   - *models.LoginPasswordData: данные логина и пароля
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetLoginPasswordData() (*models.LoginPasswordData, error) {
 	name, err := h.getSecretName()
 	if err != nil {
@@ -264,6 +335,11 @@ func (h *InputHandler) GetLoginPasswordData() (*models.LoginPasswordData, error)
 	return h.getLoginPasswordData(name, false)
 }
 
+// GetCardData получает данные банковской карты от пользователя.
+//
+// Возвращает:
+//   - *models.CardData: данные банковской карты
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetCardData() (*models.CardData, error) {
 	name, err := h.getSecretName()
 	if err != nil {
@@ -272,6 +348,11 @@ func (h *InputHandler) GetCardData() (*models.CardData, error) {
 	return h.getCardData(name, false)
 }
 
+// GetFileData получает данные файла от пользователя.
+//
+// Возвращает:
+//   - *models.FileData: данные файла
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetFileData() (*models.FileData, error) {
 	name, err := h.getSecretName()
 	if err != nil {
@@ -280,33 +361,75 @@ func (h *InputHandler) GetFileData() (*models.FileData, error) {
 	return h.getFileData(name, false)
 }
 
+// GetSecretName получает название секрета от пользователя.
+//
+// Возвращает:
+//   - string: название секрета
+//   - error: ошибка в случае неудачи или невалидного названия
 func (h *InputHandler) GetSecretName() (string, error) {
 	return h.getSecretName()
 }
 
 // Публичные методы для обновления данных
+
+// GetUpdatedTextData получает обновленные данные текстового секрета.
+//
+// Параметры:
+//   - name: название секрета для обновления
+//
+// Возвращает:
+//   - *models.TextSecretData: обновленные данные текстового секрета
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetUpdatedTextData(name string) (*models.TextSecretData, error) {
 	return h.getTextData(name, true)
 }
 
+// GetUpdatedLoginPasswordData получает обновленные данные логина и пароля.
+//
+// Параметры:
+//   - name: название секрета для обновления
+//
+// Возвращает:
+//   - *models.LoginPasswordData: обновленные данные логина и пароля
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetUpdatedLoginPasswordData(name string) (*models.LoginPasswordData, error) {
 	return h.getLoginPasswordData(name, true)
 }
 
+// GetUpdatedCardData получает обновленные данные банковской карты.
+//
+// Параметры:
+//   - name: название секрета для обновления
+//
+// Возвращает:
+//   - *models.CardData: обновленные данные банковской карты
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetUpdatedCardData(name string) (*models.CardData, error) {
 	return h.getCardData(name, true)
 }
 
+// GetUpdatedFileData получает обновленные данные файла.
+//
+// Параметры:
+//   - name: название секрета для обновления
+//
+// Возвращает:
+//   - *models.FileData: обновленные данные файла
+//   - error: ошибка в случае неудачи или невалидных данных
 func (h *InputHandler) GetUpdatedFileData(name string) (*models.FileData, error) {
 	return h.getFileData(name, true)
 }
 
-// GetSecretInfoForUpdate получает название секрета для обновления
+// GetSecretInfoForUpdate получает название секрета для обновления.
+//
+// Возвращает:
+//   - string: название секрета для обновления
+//   - error: ошибка в случае неудачи или невалидного названия
 func (h *InputHandler) GetSecretInfoForUpdate() (string, error) {
 	return h.getSecretName()
 }
 
-// PromptEnterNewData запрашивает ввод новых данных
+// PromptEnterNewData запрашивает ввод новых данных от пользователя.
 func (h *InputHandler) PromptEnterNewData() {
 	promptEnterNewData()
 }

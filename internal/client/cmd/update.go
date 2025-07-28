@@ -7,31 +7,41 @@ import (
 	"gophkeeper/internal/models"
 )
 
-// UpdateCryptoEncryptor интерфейс для шифрования данных
+// UpdateCryptoEncryptor интерфейс для шифрования данных при обновлении секретов.
 type UpdateCryptoEncryptor interface {
 	EncryptString(plaintext string) ([]byte, error)
 }
 
-// UpdateData представляет данные для обновления секрета
+// UpdateData представляет данные для обновления секрета.
+// Содержит имя секрета, версию, тип и новые данные.
 type UpdateData struct {
-	SecretName string `json:"secret_name"`
-	Version    int    `json:"version"`
-	Type       string `json:"type"`
-	Data       any    `json:"data"`
+	SecretName string `json:"secret_name"` // Имя секрета для обновления
+	Version    int    `json:"version"`     // Текущая версия секрета
+	Type       string `json:"type"`        // Тип секрета
+	Data       any    `json:"data"`        // Новые данные секрета
 }
 
-// UpdateAPIClient интерфейс для обновления секрета
+// UpdateAPIClient интерфейс для обновления секретов на сервере.
 type UpdateAPIClient interface {
 	UpdateSecret(ctx context.Context, in models.UpdateSecretIn) error
 }
 
-// UpdateCommand представляет команду обновления секрета
+// UpdateCommand представляет команду обновления секретов.
+// Поддерживает обновление различных типов секретов: текстовых, логинов/паролей,
+// данных карт и файлов.
 type UpdateCommand struct {
 	apiClient UpdateAPIClient
 	crypto    UpdateCryptoEncryptor
 }
 
-// NewUpdateCommand создает новую команду обновления
+// NewUpdateCommand создает новую команду обновления секретов.
+//
+// Параметры:
+//   - apiClient: API клиент для обновления секретов на сервере
+//   - crypto: криптографический модуль для шифрования данных
+//
+// Возвращает:
+//   - *UpdateCommand: новый экземпляр команды обновления
 func NewUpdateCommand(apiClient UpdateAPIClient, crypto UpdateCryptoEncryptor) *UpdateCommand {
 	return &UpdateCommand{
 		apiClient: apiClient,
@@ -39,7 +49,20 @@ func NewUpdateCommand(apiClient UpdateAPIClient, crypto UpdateCryptoEncryptor) *
 	}
 }
 
-// Execute выполняет команду обновления
+// Execute выполняет команду обновления секрета.
+// Поддерживает следующие типы данных:
+// - TextSecretData: текстовые секреты
+// - LoginPasswordData: логины и пароли
+// - CardData: данные банковских карт
+// - FileData: файлы
+//
+// Параметры:
+//   - ctx: контекст выполнения
+//   - args: должен быть типа *UpdateData с данными для обновления
+//
+// Возвращает:
+//   - any: nil при успешном обновлении
+//   - error: ошибка в случае неудачи
 func (c *UpdateCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Получаем данные для обновления
 	updateData, ok := args.(*UpdateData)
@@ -127,12 +150,18 @@ func (c *UpdateCommand) Execute(ctx context.Context, args any) (any, error) {
 	return nil, nil
 }
 
-// GetName возвращает имя команды
+// GetName возвращает имя команды.
+//
+// Возвращает:
+//   - string: "update"
 func (c *UpdateCommand) GetName() string {
 	return "update"
 }
 
-// GetDescription возвращает описание команды
+// GetDescription возвращает описание команды.
+//
+// Возвращает:
+//   - string: описание команды обновления
 func (c *UpdateCommand) GetDescription() string {
 	return "Обновить секрет на сервере"
 }

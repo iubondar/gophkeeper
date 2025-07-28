@@ -7,11 +7,13 @@ import (
 	"gophkeeper/internal/models"
 )
 
+// RegisterAPIClient определяет интерфейс для API клиента, поддерживающего регистрацию.
 type RegisterAPIClient interface {
 	Register(ctx context.Context, in models.RegisterIn) error
 }
 
-// RegisterCommand обрабатывает команду регистрации
+// RegisterCommand обрабатывает команду регистрации нового пользователя.
+// Выполняет регистрацию через API и настраивает криптографические ключи.
 type RegisterCommand struct {
 	apiClient RegisterAPIClient
 	crypto    *crypto.Crypto
@@ -20,7 +22,14 @@ type RegisterCommand struct {
 // RegisterCommand реализует интерфейс Command
 var _ Command = (*RegisterCommand)(nil)
 
-// NewRegisterCommand создает новую команду регистрации
+// NewRegisterCommand создает новую команду регистрации.
+//
+// Параметры:
+//   - apiClient: API клиент для выполнения регистрации
+//   - crypto: криптографический модуль для работы с паролями и ключами
+//
+// Возвращает:
+//   - *RegisterCommand: новый экземпляр команды регистрации
 func NewRegisterCommand(apiClient RegisterAPIClient, crypto *crypto.Crypto) *RegisterCommand {
 	return &RegisterCommand{
 		apiClient: apiClient,
@@ -28,7 +37,17 @@ func NewRegisterCommand(apiClient RegisterAPIClient, crypto *crypto.Crypto) *Reg
 	}
 }
 
-// Execute выполняет процесс регистрации пользователя
+// Execute выполняет процесс регистрации пользователя.
+// Генерирует соль, хеширует пароль и отправляет данные на сервер.
+// После успешной регистрации создает ключ шифрования.
+//
+// Параметры:
+//   - ctx: контекст выполнения
+//   - args: должен быть типа models.UserCredentials с логином и паролем
+//
+// Возвращает:
+//   - any: nil при успешной регистрации
+//   - error: ошибка в случае неудачи
 func (c *RegisterCommand) Execute(ctx context.Context, args any) (any, error) {
 	credentials, ok := args.(models.UserCredentials)
 	if !ok {
@@ -63,12 +82,18 @@ func (c *RegisterCommand) Execute(ctx context.Context, args any) (any, error) {
 	return nil, nil
 }
 
-// GetName возвращает имя команды
+// GetName возвращает имя команды.
+//
+// Возвращает:
+//   - string: "register"
 func (c *RegisterCommand) GetName() string {
 	return "register"
 }
 
-// GetDescription возвращает описание команды
+// GetDescription возвращает описание команды.
+//
+// Возвращает:
+//   - string: описание команды регистрации
 func (c *RegisterCommand) GetDescription() string {
 	return "Регистрация нового пользователя"
 }

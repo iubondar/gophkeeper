@@ -12,25 +12,34 @@ import (
 	"path/filepath"
 )
 
-// UploadCryptoEncryptor интерфейс для шифрования данных
+// UploadCryptoEncryptor интерфейс для шифрования данных при загрузке.
 type UploadCryptoEncryptor interface {
 	EncryptString(plaintext string) ([]byte, error)
 	EncryptStream(writer io.Writer) (io.WriteCloser, error)
 }
 
-// UploadAPIClient интерфейс для загрузки секрета
+// UploadAPIClient интерфейс для загрузки секретов и файлов на сервер.
 type UploadAPIClient interface {
 	UploadSecret(ctx context.Context, in models.UploadSecretIn) error
 	UploadFile(ctx context.Context, label, metadata string, file io.Reader, filename string) (*models.UploadSecretOut, error)
 }
 
-// UploadCommand представляет команду загрузки секрета
+// UploadCommand представляет команду загрузки секретов и файлов на сервер.
+// Поддерживает различные типы данных: текстовые секреты, логины/пароли,
+// данные карт и файлы.
 type UploadCommand struct {
 	apiClient UploadAPIClient
 	crypto    UploadCryptoEncryptor
 }
 
-// NewUploadCommand создает новую команду загрузки
+// NewUploadCommand создает новую команду загрузки.
+//
+// Параметры:
+//   - apiClient: API клиент для загрузки данных на сервер
+//   - crypto: криптографический модуль для шифрования данных
+//
+// Возвращает:
+//   - *UploadCommand: новый экземпляр команды загрузки
 func NewUploadCommand(apiClient UploadAPIClient, crypto UploadCryptoEncryptor) *UploadCommand {
 	return &UploadCommand{
 		apiClient: apiClient,
@@ -38,7 +47,20 @@ func NewUploadCommand(apiClient UploadAPIClient, crypto UploadCryptoEncryptor) *
 	}
 }
 
-// Execute выполняет команду загрузки
+// Execute выполняет команду загрузки секрета или файла.
+// Поддерживает следующие типы данных:
+// - TextSecretData: текстовые секреты
+// - LoginPasswordData: логины и пароли
+// - CardData: данные банковских карт
+// - FileData: файлы (обрабатываются отдельно)
+//
+// Параметры:
+//   - ctx: контекст выполнения
+//   - args: данные для загрузки (один из типов SecretData)
+//
+// Возвращает:
+//   - any: результат загрузки (для файлов возвращает UploadSecretOut)
+//   - error: ошибка в случае неудачи
 func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Обрабатываем разные типы данных
 	var secretData models.SecretData
@@ -110,7 +132,16 @@ func (c *UploadCommand) Execute(ctx context.Context, args any) (any, error) {
 	return nil, nil
 }
 
-// handleFileUpload обрабатывает загрузку файла
+// handleFileUpload обрабатывает загрузку файла.
+// Читает файл с диска, шифрует его потоково и загружает на сервер.
+//
+// Параметры:
+//   - ctx: контекст выполнения
+//   - data: данные файла для загрузки
+//
+// Возвращает:
+//   - any: результат загрузки файла
+//   - error: ошибка в случае неудачи
 func (c *UploadCommand) handleFileUpload(ctx context.Context, data *models.FileData) (any, error) {
 	// Нормализуем путь к файлу (расширяем символ ~ и другие преобразования)
 	normalizedPath, err := os_utils.NormalizeFilePath(data.FilePath)
@@ -157,12 +188,18 @@ func (c *UploadCommand) handleFileUpload(ctx context.Context, data *models.FileD
 	return result, nil
 }
 
-// GetName возвращает имя команды
+// GetName возвращает имя команды.
+//
+// Возвращает:
+//   - string: "upload"
 func (c *UploadCommand) GetName() string {
 	return "upload"
 }
 
-// GetDescription возвращает описание команды
+// GetDescription возвращает описание команды.
+//
+// Возвращает:
+//   - string: описание команды загрузки
 func (c *UploadCommand) GetDescription() string {
 	return "Загрузить секрет на сервер"
 }

@@ -11,31 +11,42 @@ import (
 	"path/filepath"
 )
 
-// CryptoDecryptor интерфейс для расшифровки данных
+// CryptoDecryptor интерфейс для расшифровки данных при получении секретов.
 type CryptoDecryptor interface {
 	DecryptString(encryptedData []byte) (string, error)
 	DecryptStream(reader io.Reader) (io.ReadCloser, error)
 }
 
-// GetSecretResult представляет результат выполнения команды get
+// GetSecretResult представляет результат выполнения команды get.
+// Содержит расшифрованные данные секрета, его тип и метаданные.
 type GetSecretResult struct {
-	Type     string `json:"type"`
-	Data     any    `json:"data"`
-	Metadata string `json:"metadata"`
+	Type     string `json:"type"`     // Тип секрета
+	Data     any    `json:"data"`     // Расшифрованные данные секрета
+	Metadata string `json:"metadata"` // Метаданные секрета
 }
 
+// GetAPIClient интерфейс для получения секретов и файлов с сервера.
 type GetAPIClient interface {
 	GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error)
 	DownloadFile(ctx context.Context, label string) (io.ReadCloser, error)
 }
 
-// GetCommand представляет команду получения секрета
+// GetCommand представляет команду получения секретов с сервера.
+// Получает секрет с сервера, расшифровывает его и возвращает структурированные данные.
+// Для файлов также скачивает их на локальный диск.
 type GetCommand struct {
 	apiClient GetAPIClient
 	crypto    CryptoDecryptor
 }
 
-// NewGetCommand создает новую команду получения
+// NewGetCommand создает новую команду получения секретов.
+//
+// Параметры:
+//   - apiClient: API клиент для получения секретов и файлов с сервера
+//   - crypto: криптографический модуль для расшифровки данных
+//
+// Возвращает:
+//   - *GetCommand: новый экземпляр команды получения
 func NewGetCommand(apiClient GetAPIClient, crypto CryptoDecryptor) *GetCommand {
 	return &GetCommand{
 		apiClient: apiClient,
@@ -43,7 +54,18 @@ func NewGetCommand(apiClient GetAPIClient, crypto CryptoDecryptor) *GetCommand {
 	}
 }
 
-// Execute выполняет команду получения
+// Execute выполняет команду получения секрета.
+// Получает секрет с сервера, расшифровывает его и возвращает структурированные данные
+// в зависимости от типа секрета (текст, логин/пароль, карта, файл).
+// Для файлов также скачивает их в папку загрузок.
+//
+// Параметры:
+//   - ctx: контекст выполнения
+//   - args: имя секрета (string)
+//
+// Возвращает:
+//   - any: GetSecretResult с расшифрованными данными секрета
+//   - error: ошибка в случае неудачи
 func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Получаем название секрета
 	secretName, ok := args.(string)
@@ -90,18 +112,33 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 	return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 }
 
-// GetName возвращает имя команды
+// GetName возвращает имя команды.
+//
+// Возвращает:
+//   - string: "get"
 func (c *GetCommand) GetName() string {
 	return "get"
 }
 
-// GetDescription возвращает описание команды
+// GetDescription возвращает описание команды.
+//
+// Возвращает:
+//   - string: описание команды получения
 func (c *GetCommand) GetDescription() string {
 	return "Получить секрет с сервера"
 }
 
 // Вынесенные приватные функции для обработки каждого типа секрета
 
+// handleTextSecret обрабатывает получение текстового секрета.
+//
+// Параметры:
+//   - decryptedData: расшифрованные данные секрета
+//   - metadata: метаданные секрета
+//
+// Возвращает:
+//   - *GetSecretResult: результат с текстовыми данными
+//   - error: ошибка в случае неудачи
 func handleTextSecret(decryptedData string, metadata string) (*GetSecretResult, error) {
 	var textSecret models.TextSecretData
 	if err := json.Unmarshal([]byte(decryptedData), &textSecret); err != nil {
@@ -114,6 +151,15 @@ func handleTextSecret(decryptedData string, metadata string) (*GetSecretResult, 
 	}, nil
 }
 
+// handleLoginPasswordSecret обрабатывает получение секрета логин/пароль.
+//
+// Параметры:
+//   - decryptedData: расшифрованные данные секрета
+//   - metadata: метаданные секрета
+//
+// Возвращает:
+//   - *GetSecretResult: результат с данными логина/пароля
+//   - error: ошибка в случае неудачи
 func handleLoginPasswordSecret(decryptedData string, metadata string) (*GetSecretResult, error) {
 	var loginPassword models.LoginPasswordData
 	if err := json.Unmarshal([]byte(decryptedData), &loginPassword); err != nil {
@@ -126,6 +172,15 @@ func handleLoginPasswordSecret(decryptedData string, metadata string) (*GetSecre
 	}, nil
 }
 
+// handleCardSecret обрабатывает получение данных банковской карты.
+//
+// Параметры:
+//   - decryptedData: расшифрованные данные секрета
+//   - metadata: метаданные секрета
+//
+// Возвращает:
+//   - *GetSecretResult: результат с данными карты
+//   - error: ошибка в случае неудачи
 func handleCardSecret(decryptedData string, metadata string) (*GetSecretResult, error) {
 	var cardData models.CardData
 	if err := json.Unmarshal([]byte(decryptedData), &cardData); err != nil {
@@ -138,6 +193,19 @@ func handleCardSecret(decryptedData string, metadata string) (*GetSecretResult, 
 	}, nil
 }
 
+// handleFileDownload обрабатывает скачивание файла с сервера.
+// Скачивает зашифрованный файл, расшифровывает его и сохраняет в папку загрузок.
+//
+// Параметры:
+//   - apiClient: API клиент для скачивания файлов
+//   - crypto: криптографический модуль для расшифровки
+//   - label: метка файла
+//   - metadata: метаданные файла
+//   - fileName: оригинальное имя файла
+//
+// Возвращает:
+//   - *GetSecretResult: результат с информацией о скачанном файле
+//   - error: ошибка в случае неудачи
 func handleFileDownload(apiClient GetAPIClient, crypto CryptoDecryptor, label, metadata, fileName string) (*GetSecretResult, error) {
 	// Скачиваем файл с сервера
 	reader, err := apiClient.DownloadFile(context.Background(), label)

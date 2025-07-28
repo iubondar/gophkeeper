@@ -1,3 +1,6 @@
+// Package auth предоставляет функциональность для работы с JWT токенами аутентификации.
+// Включает генерацию access и refresh токенов, а также извлечение информации о пользователе
+// из HTTP запросов.
 package auth
 
 import (
@@ -11,12 +14,32 @@ import (
 )
 
 const secretKey = "supersecretkey"
+
+// AuthCookieName - имя cookie для хранения токена аутентификации
 const AuthCookieName = "Authorization"
 
+// GenerateAccessToken создает JWT access токен для указанного пользователя.
+// Токен действителен в течение 15 минут.
+//
+// Параметры:
+//   - userID: уникальный идентификатор пользователя
+//
+// Возвращает:
+//   - string: подписанный JWT токен
+//   - error: ошибка в случае неудачи
 func GenerateAccessToken(userID string) (string, error) {
 	return generateToken(userID, 15*time.Minute)
 }
 
+// GenerateRefreshToken создает JWT refresh токен для указанного пользователя.
+// Токен действителен в течение 7 дней.
+//
+// Параметры:
+//   - userID: уникальный идентификатор пользователя
+//
+// Возвращает:
+//   - string: подписанный JWT токен
+//   - error: ошибка в случае неудачи
 func GenerateRefreshToken(userID string) (string, error) {
 	return generateToken(userID, 7*24*time.Hour) // 7 дней
 }
@@ -32,6 +55,15 @@ func generateToken(userID string, duration time.Duration) (string, error) {
 	return token.SignedString([]byte(secretKey))
 }
 
+// GetUserIDFromReq извлекает идентификатор пользователя из HTTP запроса.
+// Ищет токен в cookie с именем AuthCookieName и валидирует его.
+//
+// Параметры:
+//   - req: HTTP запрос для извлечения токена
+//
+// Возвращает:
+//   - uuid.UUID: идентификатор пользователя или uuid.Nil если токен отсутствует/недействителен
+//   - error: ошибка в случае неудачи
 func GetUserIDFromReq(req *http.Request) (userID uuid.UUID, err error) {
 	authCookie, err := req.Cookie(AuthCookieName)
 	if err != nil {

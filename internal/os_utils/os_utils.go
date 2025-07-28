@@ -10,8 +10,15 @@ import (
 	"strings"
 )
 
-// NormalizeFilePath нормализует путь к файлу, выполняя необходимые преобразования
-// Включает расширение символа ~ в домашнюю директорию пользователя
+// NormalizeFilePath нормализует путь к файлу, выполняя необходимые преобразования.
+// Включает расширение символа ~ в домашнюю директорию пользователя.
+//
+// Параметры:
+//   - path: путь к файлу для нормализации
+//
+// Возвращает:
+//   - string: нормализованный путь к файлу
+//   - error: ошибка в случае неудачи
 func NormalizeFilePath(path string) (string, error) {
 	// Расширяем символ ~ в начале пути
 	expandedPath, err := expandTilde(path)
@@ -25,8 +32,15 @@ func NormalizeFilePath(path string) (string, error) {
 	return expandedPath, nil
 }
 
-// expandTilde расширяет символ ~ в начале пути на домашнюю директорию пользователя
-// Если путь не начинается с ~, возвращает путь без изменений
+// expandTilde расширяет символ ~ в начале пути на домашнюю директорию пользователя.
+// Если путь не начинается с ~, возвращает путь без изменений.
+//
+// Параметры:
+//   - path: путь для расширения
+//
+// Возвращает:
+//   - string: расширенный путь
+//   - error: ошибка в случае неудачи
 func expandTilde(path string) (string, error) {
 	if !strings.HasPrefix(path, "~") {
 		return path, nil
@@ -53,8 +67,13 @@ func expandTilde(path string) (string, error) {
 	return path, nil
 }
 
-// GetDownloadsDir возвращает путь к стандартной папке загрузок пользователя
-// Поддерживает Windows, macOS и Linux
+// GetDownloadsDir возвращает путь к стандартной папке загрузок пользователя.
+// Поддерживает Windows, macOS и Linux.
+// Создает папку загрузок, если она не существует.
+//
+// Возвращает:
+//   - string: путь к папке загрузок
+//   - error: ошибка в случае неудачи
 func GetDownloadsDir() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -108,7 +127,15 @@ func GetDownloadsDir() (string, error) {
 }
 
 // GenerateUniqueFilePath генерирует уникальный путь к файлу, добавляя номер к имени файла,
-// если файл с таким именем уже существует
+// если файл с таким именем уже существует.
+// Например: file.txt -> file_1.txt -> file_2.txt
+//
+// Параметры:
+//   - filePath: исходный путь к файлу
+//
+// Возвращает:
+//   - string: уникальный путь к файлу
+//   - error: ошибка в случае неудачи
 func GenerateUniqueFilePath(filePath string) (string, error) {
 	// Проверяем, существует ли файл с таким именем, и если да, добавляем номер
 	counter := 1

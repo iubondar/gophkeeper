@@ -1,3 +1,6 @@
+// Package shell предоставляет интерактивный интерфейс для работы с GophKeeper.
+// Включает управление меню, обработку команд и взаимодействие с пользователем
+// через консольный интерфейс.
 package shell
 
 import (
@@ -9,7 +12,8 @@ import (
 	"gophkeeper/internal/models"
 )
 
-// Shell представляет интерактивный интерфейс для работы с GophKeeper
+// Shell представляет интерактивный интерфейс для работы с GophKeeper.
+// Управляет меню, обработкой команд и взаимодействием с пользователем.
 type Shell struct {
 	commandRegistry CommandRegistry
 	menuManager     *MenuManager
@@ -19,7 +23,17 @@ type Shell struct {
 	buildTime       string
 }
 
-// NewShell создает новый экземпляр Shell
+// NewShell создает новый экземпляр Shell с указанными зависимостями.
+//
+// Параметры:
+//   - registry: реестр команд для выполнения операций
+//   - inputHandler: обработчик пользовательского ввода
+//   - display: интерфейс для отображения информации
+//   - version: версия приложения
+//   - buildTime: дата и время сборки
+//
+// Возвращает:
+//   - *Shell: новый экземпляр интерактивного интерфейса
 func NewShell(registry CommandRegistry, inputHandler InputHandler, display Display, version, buildTime string) *Shell {
 	menuManager := NewMenuManager()
 	menuManager.SetDisplay(display)
@@ -34,12 +48,25 @@ func NewShell(registry CommandRegistry, inputHandler InputHandler, display Displ
 	}
 }
 
-// NewShellWithDefaults создает Shell с дефолтными зависимостями
+// NewShellWithDefaults создает Shell с дефолтными зависимостями.
+// Использует стандартные реализации InputHandler и Display.
+//
+// Параметры:
+//   - registry: реестр команд для выполнения операций
+//   - version: версия приложения
+//   - buildTime: дата и время сборки
+//
+// Возвращает:
+//   - *Shell: новый экземпляр интерактивного интерфейса
 func NewShellWithDefaults(registry *cmd.CommandRegistry, version, buildTime string) *Shell {
 	return NewShell(registry, input.NewInputHandler(), display.NewDisplay(), version, buildTime)
 }
 
-// Run запускает интерактивный интерфейс
+// Run запускает интерактивный интерфейс.
+// Выполняет проверку доступности сервера и запускает основной цикл меню.
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи или при выходе из приложения
 func (s *Shell) Run() error {
 	s.display.Welcome()
 
@@ -99,7 +126,15 @@ func (s *Shell) Run() error {
 	}
 }
 
-// executeCommand выполняет команду с соответствующими аргументами
+// executeCommand выполняет команду с соответствующими аргументами.
+// Получает данные от пользователя в зависимости от типа команды.
+//
+// Параметры:
+//   - commandName: имя команды для выполнения
+//
+// Возвращает:
+//   - any: результат выполнения команды
+//   - error: ошибка в случае неудачи
 func (s *Shell) executeCommand(commandName string) (any, error) {
 	ctx := context.Background()
 
@@ -160,7 +195,12 @@ func (s *Shell) executeCommand(commandName string) (any, error) {
 	return s.commandRegistry.Execute(ctx, commandName, data)
 }
 
-// handleCommandResult обрабатывает результат выполнения команды
+// handleCommandResult обрабатывает результат выполнения команды.
+// Отображает результат в зависимости от типа команды.
+//
+// Параметры:
+//   - commandName: имя выполненной команды
+//   - result: результат выполнения команды
 func (s *Shell) handleCommandResult(commandName string, result any) {
 	// Обрабатываем специальные случаи для команды get
 	if commandName == CommandGet {
@@ -174,7 +214,11 @@ func (s *Shell) handleCommandResult(commandName string, result any) {
 	s.printSuccessMessage(commandName)
 }
 
-// displaySecretResult отображает результат получения секрета
+// displaySecretResult отображает результат получения секрета.
+// Показывает данные секрета в зависимости от его типа.
+//
+// Параметры:
+//   - result: результат получения секрета
 func (s *Shell) displaySecretResult(result *cmd.GetSecretResult) {
 	switch result.Type {
 	case models.SecretTypeText:
@@ -198,6 +242,10 @@ func (s *Shell) displaySecretResult(result *cmd.GetSecretResult) {
 	}
 }
 
+// printSuccessMessage отображает сообщение об успешном выполнении команды.
+//
+// Параметры:
+//   - commandName: имя выполненной команды
 func (s *Shell) printSuccessMessage(commandName string) {
 	switch commandName {
 	case CommandRegister:
@@ -218,35 +266,58 @@ func (s *Shell) printSuccessMessage(commandName string) {
 	}
 }
 
-// checkServerHealth проверяет доступность сервера
+// checkServerHealth проверяет доступность сервера.
+// Выполняет команду health для проверки соединения.
+//
+// Возвращает:
+//   - error: ошибка в случае недоступности сервера
 func (s *Shell) checkServerHealth() error {
 	_, err := s.commandRegistry.Execute(context.Background(), "health", nil)
 	return err
 }
 
 // Добавляем приватные методы-обработчики
+
+// handleExitCommand обрабатывает команду выхода из приложения.
+//
+// Возвращает:
+//   - error: всегда nil
 func (s *Shell) handleExitCommand() error {
 	s.display.Goodbye()
 	return nil
 }
 
+// handleLogoutCommand обрабатывает команду выхода из аккаунта.
+// Переключает меню в основное состояние и очищает состояние действия.
 func (s *Shell) handleLogoutCommand() {
 	s.menuManager.SwitchToState(MenuStateMain)
 	s.menuManager.ClearActionState()
 	s.display.Logout()
 }
 
+// handleBackCommand обрабатывает команду возврата назад в меню.
+// Показывает сообщение об ошибке, если возврат невозможен.
 func (s *Shell) handleBackCommand() {
 	if !s.menuManager.GoBack() {
 		s.display.BackNotAllowed()
 	}
 }
 
+// handleActionCommand обрабатывает команду действия (upload, show).
+// Устанавливает состояние действия и переключает в меню выбора типа данных.
+//
+// Параметры:
+//   - commandName: имя команды действия
 func (s *Shell) handleActionCommand(commandName string) {
 	s.menuManager.SetActionState(commandName, "")
 	s.menuManager.SwitchToState(MenuStateDataType)
 }
 
+// handleDataTypeCommand обрабатывает выбор типа данных.
+// Выполняет команду действия с выбранным типом данных.
+//
+// Параметры:
+//   - commandName: выбранный тип данных
 func (s *Shell) handleDataTypeCommand(commandName string) {
 	actionState := s.menuManager.GetActionState()
 	if actionState != nil {
@@ -261,6 +332,10 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 	}
 }
 
+// handleGetDeleteCommand обрабатывает команды получения и удаления секретов.
+//
+// Параметры:
+//   - commandName: имя команды (get или delete)
 func (s *Shell) handleGetDeleteCommand(commandName string) {
 	if result, err := s.executeCommand(commandName); err != nil {
 		s.display.ErrorMsg(err)
@@ -269,6 +344,8 @@ func (s *Shell) handleGetDeleteCommand(commandName string) {
 	}
 }
 
+// handleVersionCommand обрабатывает команду отображения версии.
+// Получает информацию о версии и отображает ее пользователю.
 func (s *Shell) handleVersionCommand() {
 	if result, err := s.commandRegistry.Execute(context.Background(), CommandVersion, nil); err != nil {
 		s.display.ErrorMsg(err)
@@ -279,6 +356,8 @@ func (s *Shell) handleVersionCommand() {
 	}
 }
 
+// handleUpdateCommand обрабатывает команду обновления секрета.
+// Получает текущие данные секрета, запрашивает новые данные и выполняет обновление.
 func (s *Shell) handleUpdateCommand() {
 	// Получаем название секрета через input
 	secretName, err := s.inputHandler.GetSecretName()

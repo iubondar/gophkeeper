@@ -1,3 +1,5 @@
+// Package validators предоставляет функции для валидации данных в приложении GophKeeper.
+// Включает валидацию пользовательских данных, различных типов секретов и названий секретов.
 package validators
 
 import (
@@ -9,7 +11,15 @@ import (
 	"github.com/asaskevich/govalidator"
 )
 
-// ValidateUserCredentials проверяет данные пользователя
+// ValidateUserCredentials проверяет данные пользователя.
+// Валидирует логин и пароль согласно правилам валидации в структуре UserCredentials.
+//
+// Параметры:
+//   - credentials: данные пользователя для валидации
+//
+// Возвращает:
+//   - bool: true если данные валидны
+//   - error: ошибка валидации с описанием проблемы
 func ValidateUserCredentials(credentials *models.UserCredentials) (bool, error) {
 	if credentials == nil {
 		return false, fmt.Errorf("данные пользователя не могут быть пустыми")
@@ -23,7 +33,15 @@ func ValidateUserCredentials(credentials *models.UserCredentials) (bool, error) 
 	return true, nil
 }
 
-// ValidateTextSecretData проверяет данные текстового секрета
+// ValidateTextSecretData проверяет данные текстового секрета.
+// Валидирует название и текст секрета согласно правилам валидации.
+//
+// Параметры:
+//   - data: данные текстового секрета для валидации
+//
+// Возвращает:
+//   - bool: true если данные валидны
+//   - error: ошибка валидации с описанием проблемы
 func ValidateTextSecretData(data *models.TextSecretData) (bool, error) {
 	if data == nil {
 		return false, fmt.Errorf("данные секрета не могут быть пустыми")
@@ -37,7 +55,15 @@ func ValidateTextSecretData(data *models.TextSecretData) (bool, error) {
 	return true, nil
 }
 
-// ValidateLoginPasswordData проверяет данные логина и пароля
+// ValidateLoginPasswordData проверяет данные логина и пароля.
+// Валидирует название, логин и пароль согласно правилам валидации.
+//
+// Параметры:
+//   - data: данные логина и пароля для валидации
+//
+// Возвращает:
+//   - bool: true если данные валидны
+//   - error: ошибка валидации с описанием проблемы
 func ValidateLoginPasswordData(data *models.LoginPasswordData) (bool, error) {
 	if data == nil {
 		return false, fmt.Errorf("данные секрета не могут быть пустыми")
@@ -51,7 +77,13 @@ func ValidateLoginPasswordData(data *models.LoginPasswordData) (bool, error) {
 	return true, nil
 }
 
-// isValidExpiry проверяет формат срока действия карты MM/YY и диапазон месяца
+// isValidExpiry проверяет формат срока действия карты MM/YY и диапазон месяца.
+//
+// Параметры:
+//   - expiry: строка срока действия в формате MM/YY
+//
+// Возвращает:
+//   - bool: true если формат корректен
 func isValidExpiry(expiry string) bool {
 	if len(expiry) != 5 || expiry[2] != '/' {
 		return false
@@ -71,7 +103,15 @@ func isValidExpiry(expiry string) bool {
 	return true
 }
 
-// ValidateCardData проверяет данные банковской карты
+// ValidateCardData проверяет данные банковской карты.
+// Валидирует номер карты, срок действия, CVV и другие поля согласно правилам.
+//
+// Параметры:
+//   - data: данные банковской карты для валидации
+//
+// Возвращает:
+//   - bool: true если данные валидны
+//   - error: ошибка валидации с описанием проблемы
 func ValidateCardData(data *models.CardData) (bool, error) {
 	if data == nil {
 		return false, fmt.Errorf("данные секрета не могут быть пустыми")
@@ -94,7 +134,15 @@ func ValidateCardData(data *models.CardData) (bool, error) {
 	return true, nil
 }
 
-// ValidateFileData проверяет данные файла
+// ValidateFileData проверяет данные файла.
+// Валидирует название и путь к файлу согласно правилам валидации.
+//
+// Параметры:
+//   - data: данные файла для валидации
+//
+// Возвращает:
+//   - bool: true если данные валидны
+//   - error: ошибка валидации с описанием проблемы
 func ValidateFileData(data *models.FileData) (bool, error) {
 	if data == nil {
 		return false, fmt.Errorf("данные секрета не могут быть пустыми")
@@ -108,7 +156,15 @@ func ValidateFileData(data *models.FileData) (bool, error) {
 	return true, nil
 }
 
-// ValidateSecretName проверяет название секрета
+// ValidateSecretName проверяет название секрета.
+// Валидирует длину, допустимые символы и другие правила для названий секретов.
+//
+// Параметры:
+//   - name: название секрета для валидации
+//
+// Возвращает:
+//   - bool: true если название валидно
+//   - error: ошибка валидации с описанием проблемы
 func ValidateSecretName(name string) (bool, error) {
 	if govalidator.IsNull(name) {
 		return false, fmt.Errorf("название секрета не может быть пустым")

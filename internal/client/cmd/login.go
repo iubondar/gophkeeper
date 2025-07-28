@@ -7,12 +7,14 @@ import (
 	"gophkeeper/internal/models"
 )
 
+// LoginAPIClient определяет интерфейс для API клиента, поддерживающего вход и аутентификацию.
 type LoginAPIClient interface {
 	Login(ctx context.Context, in models.LoginIn) (salt string, err error)
 	Authenticate(ctx context.Context, in models.AuthenticateIn) error
 }
 
-// LoginCommand обрабатывает команду входа
+// LoginCommand обрабатывает команду входа в систему.
+// Выполняет двухэтапную аутентификацию: получение соли и аутентификация с хешем пароля.
 type LoginCommand struct {
 	apiClient LoginAPIClient
 	crypto    *crypto.Crypto
@@ -21,7 +23,14 @@ type LoginCommand struct {
 // LoginCommand реализует интерфейс Command
 var _ Command = (*LoginCommand)(nil)
 
-// NewLoginCommand создает новую команду входа
+// NewLoginCommand создает новую команду входа.
+//
+// Параметры:
+//   - apiClient: API клиент для выполнения входа и аутентификации
+//   - crypto: криптографический модуль для работы с паролями и ключами
+//
+// Возвращает:
+//   - *LoginCommand: новый экземпляр команды входа
 func NewLoginCommand(apiClient LoginAPIClient, crypto *crypto.Crypto) *LoginCommand {
 	return &LoginCommand{
 		apiClient: apiClient,
@@ -29,7 +38,19 @@ func NewLoginCommand(apiClient LoginAPIClient, crypto *crypto.Crypto) *LoginComm
 	}
 }
 
-// Execute выполняет процесс входа пользователя
+// Execute выполняет процесс входа пользователя.
+// Процесс состоит из двух этапов:
+// 1. Получение соли с сервера
+// 2. Аутентификация с хешированным паролем
+// После успешного входа создает ключ шифрования.
+//
+// Параметры:
+//   - ctx: контекст выполнения
+//   - args: должен быть типа models.UserCredentials с логином и паролем
+//
+// Возвращает:
+//   - any: nil при успешном входе
+//   - error: ошибка в случае неудачи
 func (c *LoginCommand) Execute(ctx context.Context, args any) (any, error) {
 	credentials, ok := args.(models.UserCredentials)
 	if !ok {
@@ -72,12 +93,18 @@ func (c *LoginCommand) Execute(ctx context.Context, args any) (any, error) {
 	return nil, nil
 }
 
-// GetName возвращает имя команды
+// GetName возвращает имя команды.
+//
+// Возвращает:
+//   - string: "login"
 func (c *LoginCommand) GetName() string {
 	return "login"
 }
 
-// GetDescription возвращает описание команды
+// GetDescription возвращает описание команды.
+//
+// Возвращает:
+//   - string: описание команды входа
 func (c *LoginCommand) GetDescription() string {
 	return "Вход в существующий аккаунт"
 }

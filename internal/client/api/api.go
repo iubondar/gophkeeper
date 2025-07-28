@@ -1,3 +1,5 @@
+// Package api предоставляет HTTP клиент для взаимодействия с сервером GophKeeper.
+// Включает методы для регистрации, аутентификации, работы с секретами и файлами.
 package api
 
 import (
@@ -17,12 +19,23 @@ import (
 	"go.uber.org/zap"
 )
 
+// APIClient представляет HTTP клиент для взаимодействия с сервером GophKeeper.
+// Хранит токены аутентификации и предоставляет методы для работы с API.
 type APIClient struct {
 	httpc        *resty.Client
 	accessToken  string
 	refreshToken string
 }
 
+// NewAPIClient создает новый экземпляр APIClient для указанного URL сервера.
+// Автоматически добавляет протокол https:// если он не указан.
+// Для localhost отключает проверку SSL сертификатов.
+//
+// Параметры:
+//   - serverURL: URL сервера (например, "localhost:8080" или "https://example.com")
+//
+// Возвращает:
+//   - *APIClient: новый экземпляр клиента
 func NewAPIClient(serverURL string) *APIClient {
 	// Проверяем, начинается ли URL с протокола
 	if !strings.HasPrefix(serverURL, "http://") && !strings.HasPrefix(serverURL, "https://") {
@@ -83,6 +96,15 @@ func (c *APIClient) setAuthCookie(request *resty.Request) error {
 	return nil
 }
 
+// Register выполняет регистрацию нового пользователя на сервере.
+// После успешной регистрации автоматически сохраняет токены аутентификации.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные для регистрации
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
 func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
 	response, err := c.httpc.R().
 		SetContext(ctx).
@@ -100,7 +122,15 @@ func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
 	return c.handleAuthenticateResponse(response.Body())
 }
 
-// Login выполняет запрос на вход в систему
+// Login выполняет запрос на вход в систему и получает соль для хеширования пароля.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные для входа
+//
+// Возвращает:
+//   - string: соль для хеширования пароля
+//   - error: ошибка в случае неудачи
 func (c *APIClient) Login(ctx context.Context, in models.LoginIn) (salt string, err error) {
 	response, err := c.httpc.R().
 		SetContext(ctx).
@@ -124,6 +154,15 @@ func (c *APIClient) Login(ctx context.Context, in models.LoginIn) (salt string, 
 	return out.Salt, nil
 }
 
+// Authenticate выполняет аутентификацию пользователя с хешированным паролем.
+// После успешной аутентификации сохраняет токены доступа.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные для аутентификации
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
 func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) error {
 	response, err := c.httpc.R().
 		SetContext(ctx).
@@ -141,7 +180,15 @@ func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) 
 	return c.handleAuthenticateResponse(response.Body())
 }
 
-// UploadSecret загружает секрет на сервер
+// UploadSecret загружает секрет на сервер.
+// Требует предварительной аутентификации.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные секрета для загрузки
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
 func (c *APIClient) UploadSecret(ctx context.Context, in models.UploadSecretIn) error {
 	request := c.httpc.R().
 		SetContext(ctx).
@@ -163,7 +210,16 @@ func (c *APIClient) UploadSecret(ctx context.Context, in models.UploadSecretIn) 
 	return nil
 }
 
-// GetSecretVersion получает версию секрета с сервера
+// GetSecretVersion получает текущую версию секрета с сервера.
+// Требует предварительной аутентификации.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - secretName: имя секрета
+//
+// Возвращает:
+//   - int: версия секрета
+//   - error: ошибка в случае неудачи
 func (c *APIClient) GetSecretVersion(ctx context.Context, secretName string) (int, error) {
 	request := c.httpc.R().
 		SetContext(ctx).
@@ -193,7 +249,15 @@ func (c *APIClient) GetSecretVersion(ctx context.Context, secretName string) (in
 	return versionResult.Version, nil
 }
 
-// UpdateSecret обновляет секрет на сервере
+// UpdateSecret обновляет существующий секрет на сервере.
+// Требует предварительной аутентификации.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные для обновления секрета
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
 func (c *APIClient) UpdateSecret(ctx context.Context, in models.UpdateSecretIn) error {
 	// Выполняем обновление
 	request := c.httpc.R().
@@ -216,7 +280,16 @@ func (c *APIClient) UpdateSecret(ctx context.Context, in models.UpdateSecretIn) 
 	return nil
 }
 
-// GetSecret получает секрет с сервера
+// GetSecret получает секрет с сервера.
+// Требует предварительной аутентификации.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - secretName: имя секрета
+//
+// Возвращает:
+//   - *models.GetSecretOut: данные секрета
+//   - error: ошибка в случае неудачи
 func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error) {
 	request := c.httpc.R().
 		SetContext(ctx).
@@ -244,7 +317,15 @@ func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.G
 	return &out, nil
 }
 
-// DeleteSecret удаляет секрет с сервера
+// DeleteSecret удаляет секрет с сервера.
+// Требует предварительной аутентификации.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - secretName: имя секрета для удаления
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
 func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
 	request := c.httpc.R().
 		SetContext(ctx).
@@ -266,7 +347,19 @@ func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
 	return nil
 }
 
-// UploadFile загружает зашифрованный файл на сервер
+// UploadFile загружает зашифрованный файл на сервер.
+// Требует предварительной аутентификации.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - label: метка файла
+//   - metadata: метаданные файла
+//   - file: поток для чтения файла
+//   - filename: имя файла
+//
+// Возвращает:
+//   - *models.UploadSecretOut: результат загрузки
+//   - error: ошибка в случае неудачи
 func (c *APIClient) UploadFile(ctx context.Context, label, metadata string, file io.Reader, filename string) (*models.UploadSecretOut, error) {
 	request := c.httpc.R().
 		SetContext(ctx).
@@ -298,7 +391,16 @@ func (c *APIClient) UploadFile(ctx context.Context, label, metadata string, file
 	return &out, nil
 }
 
-// DownloadFile скачивает зашифрованный файл с сервера
+// DownloadFile скачивает зашифрованный файл с сервера.
+// Требует предварительной аутентификации.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - label: метка файла для скачивания
+//
+// Возвращает:
+//   - io.ReadCloser: поток для чтения файла
+//   - error: ошибка в случае неудачи
 func (c *APIClient) DownloadFile(ctx context.Context, label string) (io.ReadCloser, error) {
 	request := c.httpc.R().
 		SetContext(ctx).
@@ -320,7 +422,13 @@ func (c *APIClient) DownloadFile(ctx context.Context, label string) (io.ReadClos
 	return io.NopCloser(bytes.NewReader(response.Body())), nil
 }
 
-// HealthCheck проверяет доступность сервера по /api/health
+// HealthCheck проверяет доступность сервера по эндпоинту /health.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//
+// Возвращает:
+//   - error: ошибка в случае недоступности сервера
 func (c *APIClient) HealthCheck(ctx context.Context) error {
 	response, err := c.httpc.R().
 		SetContext(ctx).

@@ -7,32 +7,41 @@ import (
 	"gophkeeper/internal/models"
 )
 
-// ShowCryptoDecryptor интерфейс для расшифровки данных
+// ShowCryptoDecryptor интерфейс для расшифровки данных при отображении секретов.
 type ShowCryptoDecryptor interface {
 	DecryptString(encryptedData []byte) (string, error)
 }
 
-// ShowSecretResult представляет результат выполнения команды show
+// ShowSecretResult представляет результат выполнения команды show.
+// Содержит расшифрованные данные секрета, его тип, метаданные и версию.
 type ShowSecretResult struct {
-	Type     string `json:"type"`
-	Data     any    `json:"data"`
-	Metadata string `json:"metadata"`
-	Version  int    `json:"version"`
+	Type     string `json:"type"`     // Тип секрета
+	Data     any    `json:"data"`     // Расшифрованные данные секрета
+	Metadata string `json:"metadata"` // Метаданные секрета
+	Version  int    `json:"version"`  // Версия секрета
 }
 
-// ShowAPIClient интерфейс для получения секрета
+// ShowAPIClient интерфейс для получения секретов с сервера.
 type ShowAPIClient interface {
 	GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error)
 	GetSecretVersion(ctx context.Context, secretName string) (int, error)
 }
 
-// ShowCommand представляет команду отображения секрета
+// ShowCommand представляет команду отображения секретов.
+// Получает секрет с сервера, расшифровывает его и возвращает структурированные данные.
 type ShowCommand struct {
 	apiClient ShowAPIClient
 	crypto    ShowCryptoDecryptor
 }
 
-// NewShowCommand создает новую команду отображения
+// NewShowCommand создает новую команду отображения секретов.
+//
+// Параметры:
+//   - apiClient: API клиент для получения секретов с сервера
+//   - crypto: криптографический модуль для расшифровки данных
+//
+// Возвращает:
+//   - *ShowCommand: новый экземпляр команды отображения
 func NewShowCommand(apiClient ShowAPIClient, crypto ShowCryptoDecryptor) *ShowCommand {
 	return &ShowCommand{
 		apiClient: apiClient,
@@ -40,7 +49,17 @@ func NewShowCommand(apiClient ShowAPIClient, crypto ShowCryptoDecryptor) *ShowCo
 	}
 }
 
-// Execute выполняет команду отображения
+// Execute выполняет команду отображения секрета.
+// Получает секрет с сервера, расшифровывает его и возвращает структурированные данные
+// в зависимости от типа секрета (текст, логин/пароль, карта, файл).
+//
+// Параметры:
+//   - ctx: контекст выполнения
+//   - args: имя секрета (string)
+//
+// Возвращает:
+//   - any: ShowSecretResult с расшифрованными данными секрета
+//   - error: ошибка в случае неудачи
 func (c *ShowCommand) Execute(ctx context.Context, args any) (any, error) {
 	// Получаем название секрета
 	secretName, ok := args.(string)
@@ -111,18 +130,34 @@ func (c *ShowCommand) Execute(ctx context.Context, args any) (any, error) {
 	return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 }
 
-// GetName возвращает имя команды
+// GetName возвращает имя команды.
+//
+// Возвращает:
+//   - string: "show"
 func (c *ShowCommand) GetName() string {
 	return "show"
 }
 
-// GetDescription возвращает описание команды
+// GetDescription возвращает описание команды.
+//
+// Возвращает:
+//   - string: описание команды отображения
 func (c *ShowCommand) GetDescription() string {
 	return "Показать текущие данные секрета"
 }
 
 // Вынесенные приватные функции для обработки каждого типа секрета
 
+// handleShowTextSecret обрабатывает отображение текстового секрета.
+//
+// Параметры:
+//   - decryptedData: расшифрованные данные секрета
+//   - metadata: метаданные секрета
+//   - version: версия секрета
+//
+// Возвращает:
+//   - *ShowSecretResult: результат с текстовыми данными
+//   - error: ошибка в случае неудачи
 func handleShowTextSecret(decryptedData string, metadata string, version int) (*ShowSecretResult, error) {
 	var textSecret models.TextSecretData
 	if err := json.Unmarshal([]byte(decryptedData), &textSecret); err != nil {
@@ -136,6 +171,16 @@ func handleShowTextSecret(decryptedData string, metadata string, version int) (*
 	}, nil
 }
 
+// handleShowLoginPasswordSecret обрабатывает отображение секрета логин/пароль.
+//
+// Параметры:
+//   - decryptedData: расшифрованные данные секрета
+//   - metadata: метаданные секрета
+//   - version: версия секрета
+//
+// Возвращает:
+//   - *ShowSecretResult: результат с данными логина/пароля
+//   - error: ошибка в случае неудачи
 func handleShowLoginPasswordSecret(decryptedData string, metadata string, version int) (*ShowSecretResult, error) {
 	var loginPassword models.LoginPasswordData
 	if err := json.Unmarshal([]byte(decryptedData), &loginPassword); err != nil {
@@ -149,6 +194,16 @@ func handleShowLoginPasswordSecret(decryptedData string, metadata string, versio
 	}, nil
 }
 
+// handleShowCardSecret обрабатывает отображение данных банковской карты.
+//
+// Параметры:
+//   - decryptedData: расшифрованные данные секрета
+//   - metadata: метаданные секрета
+//   - version: версия секрета
+//
+// Возвращает:
+//   - *ShowSecretResult: результат с данными карты
+//   - error: ошибка в случае неудачи
 func handleShowCardSecret(decryptedData string, metadata string, version int) (*ShowSecretResult, error) {
 	var cardData models.CardData
 	if err := json.Unmarshal([]byte(decryptedData), &cardData); err != nil {

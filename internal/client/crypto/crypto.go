@@ -1,3 +1,6 @@
+// Package crypto предоставляет криптографические функции для клиента GophKeeper.
+// Включает хеширование паролей с Argon2, шифрование данных с AES-GCM и AES-CTR,
+// а также потоковое шифрование для работы с файлами.
 package crypto
 
 import (
@@ -12,7 +15,8 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-// Crypto предоставляет методы для шифрования и хеширования данных
+// Crypto предоставляет методы для шифрования и хеширования данных.
+// Хранит соль для хеширования паролей и ключ шифрования.
 const additionalData = "data"
 
 type Crypto struct {
@@ -20,12 +24,19 @@ type Crypto struct {
 	encryptionKey []byte
 }
 
+// NewCrypto создает новый экземпляр криптографического модуля.
+//
+// Возвращает:
+//   - *Crypto: новый экземпляр криптографического модуля
 func NewCrypto() *Crypto {
 	return &Crypto{}
 }
 
-// GenerateSalt генерирует случайную соль для хеширования пароля в base64
-// После регистрации мы генерируем соль и устанавливаем ее в Crypto
+// GenerateAndSetSalt генерирует случайную соль для хеширования пароля в base64.
+// После регистрации мы генерируем соль и устанавливаем ее в Crypto.
+//
+// Возвращает:
+//   - string: сгенерированная соль в формате base64
 func (c *Crypto) GenerateAndSetSalt() string {
 	salt := make([]byte, 32)
 	rand.Read(salt)
@@ -33,13 +44,24 @@ func (c *Crypto) GenerateAndSetSalt() string {
 	return c.salt
 }
 
-// SetSalt устанавливает соль для хеширования пароля
-// После логина мы получаем соль с сервера и устанавливаем ее в Crypto
+// SetSalt устанавливает соль для хеширования пароля.
+// После логина мы получаем соль с сервера и устанавливаем ее в Crypto.
+//
+// Параметры:
+//   - salt: соль в формате base64
 func (c *Crypto) SetSalt(salt string) {
 	c.salt = salt
 }
 
-// calcArgon2Hash вычисляет base64-хеш пароля и соли с помощью Argon2
+// calcArgon2Hash вычисляет base64-хеш пароля и соли с помощью Argon2.
+//
+// Параметры:
+//   - password: пароль для хеширования
+//   - salt: соль в формате base64
+//
+// Возвращает:
+//   - string: хеш пароля в формате base64
+//   - error: ошибка в случае неудачи
 func (c *Crypto) calcArgon2Hash(password, salt string) (string, error) {
 	key, err := c.calcArgon2Key(password, salt)
 	if err != nil {
@@ -48,7 +70,15 @@ func (c *Crypto) calcArgon2Hash(password, salt string) (string, error) {
 	return base64.StdEncoding.EncodeToString(key), nil
 }
 
-// calcArgon2Key вычисляет бинарный ключ шифрования с помощью Argon2
+// calcArgon2Key вычисляет бинарный ключ шифрования с помощью Argon2.
+//
+// Параметры:
+//   - password: пароль для генерации ключа
+//   - salt: соль в формате base64
+//
+// Возвращает:
+//   - []byte: 32-байтовый ключ для AES-256
+//   - error: ошибка в случае неудачи
 func (c *Crypto) calcArgon2Key(password, salt string) ([]byte, error) {
 	saltBytes, err := base64.StdEncoding.DecodeString(salt)
 	if err != nil {
@@ -59,8 +89,15 @@ func (c *Crypto) calcArgon2Key(password, salt string) ([]byte, error) {
 	return key, nil
 }
 
-// GeneratePasswordHash генерирует хеш пароля с использованием соли (детерминированно, Argon2)
-// Для этого мы используем соль, которая была установлена в Crypto
+// GeneratePasswordHash генерирует хеш пароля с использованием соли (детерминированно, Argon2).
+// Для этого мы используем соль, которая была установлена в Crypto.
+//
+// Параметры:
+//   - password: пароль для хеширования
+//
+// Возвращает:
+//   - string: хеш пароля в формате base64
+//   - error: ошибка в случае неудачи или если соль не установлена
 func (c *Crypto) GeneratePasswordHash(password string) (string, error) {
 	if c.salt == "" {
 		return "", errors.New("salt is not set")
@@ -68,7 +105,16 @@ func (c *Crypto) GeneratePasswordHash(password string) (string, error) {
 	return c.calcArgon2Hash(password, c.salt)
 }
 
-// VerifyPasswordHash проверяет, совпадает ли пароль с хешем (Argon2)
+// VerifyPasswordHash проверяет, совпадает ли пароль с хешем (Argon2).
+//
+// Параметры:
+//   - password: пароль для проверки
+//   - salt: соль в формате base64
+//   - hash: хеш для сравнения в формате base64
+//
+// Возвращает:
+//   - bool: true если пароль совпадает с хешем
+//   - error: ошибка в случае неудачи
 func (c *Crypto) VerifyPasswordHash(password string, salt string, hash string) (bool, error) {
 	recalc, err := c.calcArgon2Hash(password, salt)
 	if err != nil {
@@ -77,8 +123,15 @@ func (c *Crypto) VerifyPasswordHash(password string, salt string, hash string) (
 	return recalc == hash, nil
 }
 
-// GenerateAndStoreEncryptionKey генерирует ключ шифрования с использованием соли
-// Для этого мы используем соль, которая была установлена в Crypto
+// GenerateAndStoreEncryptionKey генерирует ключ шифрования с использованием соли.
+// Для этого мы используем соль, которая была установлена в Crypto.
+// Ключ используется для шифрования и расшифровки данных секретов.
+//
+// Параметры:
+//   - password: пароль для генерации ключа шифрования
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи или если соль не установлена
 func (c *Crypto) GenerateAndStoreEncryptionKey(password string) error {
 	if c.salt == "" {
 		return errors.New("salt is not set")
@@ -103,7 +156,15 @@ func (c *Crypto) GenerateAndStoreEncryptionKey(password string) error {
 	return nil
 }
 
-// EncryptString шифрует строку с использованием AES-GCM
+// EncryptString шифрует строку с использованием AES-GCM.
+// Возвращает зашифрованные данные в формате nonce || ciphertext.
+//
+// Параметры:
+//   - plaintext: строка для шифрования
+//
+// Возвращает:
+//   - []byte: зашифрованные данные
+//   - error: ошибка в случае неудачи или если ключ шифрования не установлен
 func (c *Crypto) EncryptString(plaintext string) ([]byte, error) {
 	if c.encryptionKey == nil {
 		return nil, errors.New("encryption key is not set")
@@ -130,7 +191,15 @@ func (c *Crypto) EncryptString(plaintext string) ([]byte, error) {
 	return append(nonce, ciphertext...), nil
 }
 
-// DecryptString расшифровывает бинарные данные и возвращает строку
+// DecryptString расшифровывает бинарные данные и возвращает строку.
+// Ожидает данные в формате nonce || ciphertext.
+//
+// Параметры:
+//   - encryptedData: зашифрованные данные
+//
+// Возвращает:
+//   - string: расшифрованная строка
+//   - error: ошибка в случае неудачи или если ключ шифрования не установлен
 func (c *Crypto) DecryptString(encryptedData []byte) (string, error) {
 	if c.encryptionKey == nil {
 		return "", errors.New("encryption key is not set")
@@ -162,7 +231,15 @@ func (c *Crypto) DecryptString(encryptedData []byte) (string, error) {
 	return string(plaintext), nil
 }
 
-// EncryptStream создает потоковый шифратор для файлов
+// EncryptStream создает потоковый шифратор для файлов.
+// Использует AES-CTR для эффективного потокового шифрования.
+//
+// Параметры:
+//   - writer: поток для записи зашифрованных данных
+//
+// Возвращает:
+//   - io.WriteCloser: потоковый шифратор
+//   - error: ошибка в случае неудачи или если ключ шифрования не установлен
 func (c *Crypto) EncryptStream(writer io.Writer) (io.WriteCloser, error) {
 	if c.encryptionKey == nil {
 		return nil, errors.New("encryption key is not set")
@@ -192,7 +269,15 @@ func (c *Crypto) EncryptStream(writer io.Writer) (io.WriteCloser, error) {
 	}, nil
 }
 
-// DecryptStream создает потоковый дешифратор для файлов
+// DecryptStream создает потоковый дешифратор для файлов.
+// Использует AES-CTR для эффективного потокового дешифрования.
+//
+// Параметры:
+//   - reader: поток для чтения зашифрованных данных
+//
+// Возвращает:
+//   - io.ReadCloser: потоковый дешифратор
+//   - error: ошибка в случае неудачи или если ключ шифрования не установлен
 func (c *Crypto) DecryptStream(reader io.Reader) (io.ReadCloser, error) {
 	if c.encryptionKey == nil {
 		return nil, errors.New("encryption key is not set")
@@ -217,12 +302,20 @@ func (c *Crypto) DecryptStream(reader io.Reader) (io.ReadCloser, error) {
 	}, nil
 }
 
-// encryptWriter реализует потоковое шифрование
+// encryptWriter реализует потоковое шифрование.
 type encryptWriter struct {
 	stream cipher.Stream
 	writer io.Writer
 }
 
+// Write шифрует данные и записывает их в поток.
+//
+// Параметры:
+//   - p: данные для шифрования
+//
+// Возвращает:
+//   - int: количество обработанных байт
+//   - error: ошибка в случае неудачи
 func (ew *encryptWriter) Write(p []byte) (n int, err error) {
 	// Создаем буфер для зашифрованных данных
 	ciphertext := make([]byte, len(p))
@@ -235,16 +328,28 @@ func (ew *encryptWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+// Close закрывает потоковый шифратор.
+//
+// Возвращает:
+//   - error: всегда nil
 func (ew *encryptWriter) Close() error {
 	return nil
 }
 
-// decryptReader реализует потоковое дешифрование
+// decryptReader реализует потоковое дешифрование.
 type decryptReader struct {
 	stream cipher.Stream
 	reader io.Reader
 }
 
+// Read читает и расшифровывает данные из потока.
+//
+// Параметры:
+//   - p: буфер для расшифрованных данных
+//
+// Возвращает:
+//   - int: количество прочитанных байт
+//   - error: ошибка в случае неудачи или EOF
 func (dr *decryptReader) Read(p []byte) (n int, err error) {
 	// Читаем зашифрованные данные
 	n, err = dr.reader.Read(p)
@@ -258,6 +363,10 @@ func (dr *decryptReader) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
+// Close закрывает потоковый дешифратор.
+//
+// Возвращает:
+//   - error: всегда nil
 func (dr *decryptReader) Close() error {
 	return nil
 }
