@@ -13,17 +13,24 @@ import (
 	"go.uber.org/zap"
 )
 
-// UploadFileUsecase интерфейс для загрузки файлов
+// UploadFileUsecase определяет интерфейс для загрузки файлов на сервер.
+// Интерфейс используется для абстракции бизнес-логики загрузки файлов
+// и позволяет тестировать обработчики с помощью моков.
 type UploadFileUsecase interface {
 	UploadFile(ctx context.Context, label, metadata, fileName string, file io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error)
 }
 
-// UploadFileHandler обрабатывает запросы загрузки файлов
+// UploadFileHandler обрабатывает HTTP-запросы для загрузки файлов.
+// Обработчик реализует endpoint /api/files и требует аутентификации пользователя.
+// Поддерживает multipart/form-data для загрузки файлов с метаданными.
 type UploadFileHandler struct {
 	uc UploadFileUsecase
 }
 
-// NewUploadFileHandler создает новый экземпляр UploadFileHandler
+// NewUploadFileHandler создает новый экземпляр UploadFileHandler.
+// Принимает usecase для загрузки файлов.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики загрузки файлов.
 func NewUploadFileHandler(uc UploadFileUsecase) *UploadFileHandler {
 	return &UploadFileHandler{uc: uc}
 }

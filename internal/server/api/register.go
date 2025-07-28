@@ -1,3 +1,8 @@
+// Package api предоставляет HTTP-обработчики для REST API сервера GophKeeper.
+// Пакет содержит обработчики для всех основных операций: аутентификация,
+// управление секретами, загрузка/скачивание файлов, проверка состояния сервиса.
+// Все обработчики используют usecase-слой для бизнес-логики и возвращают
+// структурированные JSON-ответы с соответствующими HTTP-статусами.
 package api
 
 import (
@@ -12,12 +17,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// RegisterHandler обрабатывает запросы регистрации пользователей
+// RegisterHandler обрабатывает HTTP-запросы для регистрации новых пользователей.
+// Обработчик реализует endpoint /api/register и использует usecase-слой
+// для выполнения бизнес-логики регистрации пользователей.
 type RegisterHandler struct {
 	uc usecase.RegisterUsecase
 }
 
-// NewRegisterHandler создает новый экземпляр RegisterHandler
+// NewRegisterHandler создает новый экземпляр RegisterHandler.
+// Принимает usecase для регистрации пользователей.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики регистрации.
 func NewRegisterHandler(uc usecase.RegisterUsecase) *RegisterHandler {
 	return &RegisterHandler{
 		uc: uc,

@@ -8,10 +8,16 @@ import (
 	"github.com/google/uuid"
 )
 
+// RecordRepository определяет интерфейс для работы с записями секретов в хранилище.
+// Интерфейс используется для абстракции от конкретной реализации хранилища
+// и позволяет тестировать usecase с помощью моков.
 type RecordRepository interface {
 	InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, fileName string, version int, createdAt, updatedAt time.Time) error
 }
 
+// UploadSecretUsecase определяет интерфейс для загрузки секретов.
+// Интерфейс содержит бизнес-логику сохранения зашифрованных секретов
+// в хранилище с генерацией уникального ID и версии.
 type UploadSecretUsecase interface {
 	UploadSecret(ctx context.Context, in models.UploadSecretIn, userID uuid.UUID) (models.UploadSecretOut, error)
 }
@@ -20,6 +26,10 @@ type uploadSecretUsecase struct {
 	repo RecordRepository
 }
 
+// NewUploadSecretUsecase создает новый экземпляр UploadSecretUsecase.
+// Принимает репозиторий для работы с записями секретов.
+// Функция используется для внедрения зависимостей и создания usecase
+// с конкретной реализацией хранилища секретов.
 func NewUploadSecretUsecase(repo RecordRepository) UploadSecretUsecase {
 	return &uploadSecretUsecase{repo: repo}
 }

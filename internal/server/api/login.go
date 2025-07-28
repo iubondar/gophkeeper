@@ -11,12 +11,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// LoginHandler обрабатывает запросы входа пользователей
+// LoginHandler обрабатывает HTTP-запросы для входа пользователей в систему.
+// Обработчик реализует endpoint /api/login и возвращает соль для хеширования пароля.
+// Использует usecase-слой для получения соли пользователя из хранилища.
 type LoginHandler struct {
 	uc usecase.LoginUsecase
 }
 
-// NewLoginHandler создает новый экземпляр LoginHandler
+// NewLoginHandler создает новый экземпляр LoginHandler.
+// Принимает usecase для входа пользователей.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики входа.
 func NewLoginHandler(uc usecase.LoginUsecase) *LoginHandler {
 	return &LoginHandler{
 		uc: uc,

@@ -1,3 +1,6 @@
+// Package compress предоставляет middleware для сжатия HTTP-ответов и декомпрессии HTTP-запросов
+// с использованием алгоритма gzip. Пакет автоматически определяет поддержку gzip клиентом
+// и прозрачно обрабатывает сжатие/декомпрессию данных.
 package compress
 
 import (
@@ -86,7 +89,17 @@ func (c *gzipReader) Close() error {
 	return c.zr.Close()
 }
 
-// Middleware для поддержки gzip
+// WithGzipCompression создает HTTP-middleware для автоматического сжатия ответов и декомпрессии запросов.
+// Middleware проверяет заголовки Accept-Encoding и Content-Encoding для определения
+// поддержки gzip клиентом и сервером соответственно.
+//
+// Функция автоматически:
+// - Сжимает ответы сервера, если клиент поддерживает gzip
+// - Декомпрессирует запросы клиента, если они сжаты в gzip
+// - Устанавливает правильные HTTP-заголовки для сжатых данных
+//
+// Параметр h - HTTP-обработчик, который будет обернут middleware.
+// Возвращает новый HTTP-обработчик с поддержкой gzip-сжатия.
 func WithGzipCompression(h http.Handler) http.Handler {
 	compressFn := func(w http.ResponseWriter, r *http.Request) {
 		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,

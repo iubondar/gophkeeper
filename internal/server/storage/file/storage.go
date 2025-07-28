@@ -1,3 +1,6 @@
+// Package file предоставляет реализацию файлового хранилища на основе MinIO.
+// Пакет содержит интерфейс FileStorage и его реализацию для загрузки,
+// скачивания и удаления файлов в объектном хранилище MinIO.
 package file
 
 import (
@@ -15,7 +18,9 @@ const (
 	BucketName = "gophkeeper-files"
 )
 
-// FileStorage интерфейс для работы с файловым хранилищем
+// FileStorage определяет интерфейс для работы с файловым хранилищем.
+// Интерфейс предоставляет методы для загрузки, скачивания, удаления файлов
+// и проверки их существования в объектном хранилище.
 type FileStorage interface {
 	UploadFile(ctx context.Context, fileKey string, reader io.Reader, size int64) error
 	DownloadFile(ctx context.Context, fileKey string) (io.ReadCloser, error)
@@ -23,10 +28,15 @@ type FileStorage interface {
 	FileExists(ctx context.Context, fileKey string) (bool, error)
 }
 
+// Storage представляет реализацию файлового хранилища на основе MinIO.
+// Структура содержит клиент MinIO для взаимодействия с объектным хранилищем.
 type Storage struct {
 	minioClient *minio.Client
 }
 
+// NewStorage создает новый экземпляр Storage с настройками MinIO.
+// Принимает конфигурацию для подключения к MinIO серверу.
+// Функция инициализирует клиент MinIO и создает бакет, если он не существует.
 func NewStorage(config *config.Config) (*Storage, error) {
 	minioClient, err := minio.New(
 		config.MinioEndpoint,

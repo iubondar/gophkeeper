@@ -9,6 +9,9 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+// MinioContainer представляет тестовый контейнер MinIO.
+// Структура содержит контейнер MinIO, endpoint для подключения
+// и учетные данные для аутентификации в тестовом окружении.
 type MinioContainer struct {
 	Container testcontainers.Container
 	Endpoint  string
@@ -16,6 +19,9 @@ type MinioContainer struct {
 	SecretKey string
 }
 
+// CreateMinioContainer создает тестовый контейнер MinIO.
+// Функция запускает контейнер MinIO с предустановленными настройками
+// и возвращает структуру с контейнером и параметрами подключения.
 func CreateMinioContainer(ctx context.Context) (*MinioContainer, error) {
 	req := testcontainers.ContainerRequest{
 		Image:        "minio/minio:latest",
@@ -59,6 +65,9 @@ func CreateMinioContainer(ctx context.Context) (*MinioContainer, error) {
 	}, nil
 }
 
+// Terminate завершает работу тестового контейнера MinIO.
+// Функция корректно останавливает и удаляет контейнер
+// для очистки ресурсов после тестирования.
 func (m *MinioContainer) Terminate(ctx context.Context) error {
 	return m.Container.Terminate(ctx)
 }

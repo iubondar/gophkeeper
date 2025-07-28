@@ -9,10 +9,16 @@ import (
 	"github.com/google/uuid"
 )
 
+// AuthenticateUserRepository определяет интерфейс для аутентификации пользователей.
+// Интерфейс используется для абстракции от конкретной реализации хранилища
+// и позволяет тестировать usecase с помощью моков.
 type AuthenticateUserRepository interface {
 	GetUserByLoginAndPassword(ctx context.Context, login string, passwordHash string) (userID uuid.UUID, err error)
 }
 
+// AuthenticateUsecase определяет интерфейс для аутентификации пользователей.
+// Интерфейс содержит бизнес-логику проверки учетных данных и генерации
+// JWT токенов доступа при успешной аутентификации.
 type AuthenticateUsecase interface {
 	Authenticate(ctx context.Context, login string, passwordHash string) (result models.AuthenticateOut, err error)
 }
@@ -21,6 +27,10 @@ type authenticateUsecase struct {
 	repo AuthenticateUserRepository
 }
 
+// NewAuthenticateUsecase создает новый экземпляр AuthenticateUsecase.
+// Принимает репозиторий для аутентификации пользователей.
+// Функция используется для внедрения зависимостей и создания usecase
+// с конкретной реализацией хранилища пользователей.
 func NewAuthenticateUsecase(repo AuthenticateUserRepository) AuthenticateUsecase {
 	return &authenticateUsecase{
 		repo: repo,
@@ -45,6 +55,9 @@ func (uc *authenticateUsecase) Authenticate(ctx context.Context, login string, p
 	return MakeAuthenticateOut(userID)
 }
 
+// MakeAuthenticateOut создает структуру ответа для аутентификации.
+// Функция генерирует JWT access и refresh токены для указанного пользователя.
+// Используется как вспомогательная функция для создания ответа аутентификации.
 func MakeAuthenticateOut(userID uuid.UUID) (out models.AuthenticateOut, err error) {
 	// Генерируем access token
 	accessToken, err := auth.GenerateAccessToken(userID.String())

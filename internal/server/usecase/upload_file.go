@@ -10,18 +10,24 @@ import (
 	"go.uber.org/zap"
 )
 
-// UploadFileStorage интерфейс для загрузки файлов в хранилище
+// UploadFileStorage определяет интерфейс для загрузки файлов в файловое хранилище.
+// Интерфейс используется для абстракции от конкретной реализации файлового хранилища
+// и позволяет тестировать usecase с помощью моков.
 type UploadFileStorage interface {
 	UploadFile(ctx context.Context, fileKey string, reader io.Reader, size int64) error
 	DeleteFile(ctx context.Context, fileKey string) error
 }
 
-// UploadFileRepository интерфейс для работы с записями файлов при загрузке
+// UploadFileRepository определяет интерфейс для работы с записями файлов при загрузке.
+// Интерфейс используется для абстракции от конкретной реализации хранилища
+// и позволяет тестировать usecase с помощью моков.
 type UploadFileRepository interface {
 	InsertRecord(ctx context.Context, id, userID uuid.UUID, label, recordType, metadata string, encryptedData []byte, fileKey string, fileName string, version int, createdAt, updatedAt time.Time) error
 }
 
-// UploadFileUsecase интерфейс для загрузки файлов
+// UploadFileUsecase определяет интерфейс для загрузки файлов.
+// Интерфейс содержит бизнес-логику загрузки файлов в файловое хранилище
+// и создания соответствующих записей в базе данных.
 type UploadFileUsecase interface {
 	UploadFile(ctx context.Context, label, metadata, fileName string, reader io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error)
 }
@@ -31,7 +37,10 @@ type uploadFileUsecase struct {
 	storage UploadFileStorage
 }
 
-// NewUploadFileUsecase создает новый usecase для загрузки файлов
+// NewUploadFileUsecase создает новый экземпляр UploadFileUsecase.
+// Принимает репозиторий для работы с записями файлов и хранилище файлов.
+// Функция используется для внедрения зависимостей и создания usecase
+// с конкретными реализациями хранилищ.
 func NewUploadFileUsecase(repo UploadFileRepository, storage UploadFileStorage) UploadFileUsecase {
 	return &uploadFileUsecase{
 		repo:    repo,
@@ -39,7 +48,9 @@ func NewUploadFileUsecase(repo UploadFileRepository, storage UploadFileStorage) 
 	}
 }
 
-// UploadFile загружает файл в хранилище и создает запись в БД
+// UploadFile загружает файл в хранилище и создает запись в БД.
+// Функция генерирует уникальный ключ для файла, загружает его в файловое хранилище
+// и создает соответствующую запись в базе данных с типом "файл".
 func (uc *uploadFileUsecase) UploadFile(ctx context.Context, label, metadata, fileName string, reader io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error) {
 	// Генерируем уникальный ключ для файла
 	fileKey := uuid.New().String()

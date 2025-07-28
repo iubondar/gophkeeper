@@ -12,12 +12,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// UploadHandler обрабатывает запросы загрузки секретов
+// UploadHandler обрабатывает HTTP-запросы для загрузки зашифрованных секретов.
+// Обработчик реализует endpoint /api/upload и требует аутентификации пользователя.
+// Использует usecase-слой для сохранения секретов в хранилище.
 type UploadHandler struct {
 	uc usecase.UploadSecretUsecase
 }
 
-// NewUploadHandler создает новый экземпляр UploadHandler
+// NewUploadHandler создает новый экземпляр UploadHandler.
+// Принимает usecase для загрузки секретов.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики загрузки секретов.
 func NewUploadHandler(uc usecase.UploadSecretUsecase) *UploadHandler {
 	return &UploadHandler{uc: uc}
 }

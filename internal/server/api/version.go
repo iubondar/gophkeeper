@@ -11,12 +11,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// VersionHandler обрабатывает запросы получения версий секретов
+// VersionHandler обрабатывает HTTP-запросы для получения версий секретов.
+// Обработчик реализует endpoint /api/version и требует аутентификации пользователя.
+// Использует usecase-слой для получения информации о версии секрета.
 type VersionHandler struct {
 	uc usecase.GetSecretUsecase
 }
 
-// NewVersionHandler создает новый экземпляр VersionHandler
+// NewVersionHandler создает новый экземпляр VersionHandler.
+// Принимает usecase для получения секретов.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики получения версий секретов.
 func NewVersionHandler(uc usecase.GetSecretUsecase) *VersionHandler {
 	return &VersionHandler{uc: uc}
 }

@@ -12,12 +12,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// UpdateHandler обрабатывает запросы обновления секретов
+// UpdateHandler обрабатывает HTTP-запросы для обновления секретов.
+// Обработчик реализует endpoint /api/update и требует аутентификации пользователя.
+// Использует usecase-слой для обновления секретов с проверкой версий.
 type UpdateHandler struct {
 	uc usecase.UpdateSecretUsecase
 }
 
-// NewUpdateHandler создает новый экземпляр UpdateHandler
+// NewUpdateHandler создает новый экземпляр UpdateHandler.
+// Принимает usecase для обновления секретов.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики обновления секретов.
 func NewUpdateHandler(uc usecase.UpdateSecretUsecase) *UpdateHandler {
 	return &UpdateHandler{uc: uc}
 }

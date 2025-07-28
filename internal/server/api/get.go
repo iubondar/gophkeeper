@@ -11,12 +11,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// GetHandler обрабатывает запросы получения секретов
+// GetHandler обрабатывает HTTP-запросы для получения зашифрованных секретов.
+// Обработчик реализует endpoint /api/get и требует аутентификации пользователя.
+// Использует usecase-слой для получения секретов из хранилища по имени.
 type GetHandler struct {
 	uc usecase.GetSecretUsecase
 }
 
-// NewGetHandler создает новый экземпляр GetHandler
+// NewGetHandler создает новый экземпляр GetHandler.
+// Принимает usecase для получения секретов.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики получения секретов.
 func NewGetHandler(uc usecase.GetSecretUsecase) *GetHandler {
 	return &GetHandler{uc: uc}
 }

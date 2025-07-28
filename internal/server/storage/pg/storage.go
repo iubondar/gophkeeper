@@ -1,3 +1,6 @@
+// Package pg предоставляет реализацию хранилища данных на основе PostgreSQL.
+// Пакет содержит структуру Storage для работы с пользователями и секретами
+// в базе данных PostgreSQL с поддержкой транзакций и обработки ошибок.
 package pg
 
 import (
@@ -16,10 +19,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// Storage представляет реализацию хранилища данных на основе PostgreSQL.
+// Структура содержит подключение к базе данных для выполнения операций
+// с пользователями и секретами.
 type Storage struct {
 	db *sql.DB
 }
 
+// NewStorage создает новый экземпляр Storage с подключением к PostgreSQL.
+// Принимает строку подключения (DSN) к базе данных.
+// Функция инициализирует подключение к PostgreSQL и возвращает готовый Storage.
 func NewStorage(dsn string) (storage *Storage, err error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

@@ -12,12 +12,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// AuthenticateHandler обрабатывает запросы аутентификации пользователей
+// AuthenticateHandler обрабатывает HTTP-запросы для аутентификации пользователей.
+// Обработчик реализует endpoint /api/authenticate и проверяет хеш пароля,
+// возвращая JWT токены доступа при успешной аутентификации.
 type AuthenticateHandler struct {
 	uc usecase.AuthenticateUsecase
 }
 
-// NewAuthenticateHandler создает новый экземпляр AuthenticateHandler
+// NewAuthenticateHandler создает новый экземпляр AuthenticateHandler.
+// Принимает usecase для аутентификации пользователей.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики аутентификации.
 func NewAuthenticateHandler(uc usecase.AuthenticateUsecase) *AuthenticateHandler {
 	return &AuthenticateHandler{
 		uc: uc,

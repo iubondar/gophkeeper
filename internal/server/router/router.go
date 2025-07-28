@@ -15,6 +15,14 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+// NewRouter создает и настраивает HTTP-маршрутизатор с использованием библиотеки chi.
+// Функция настраивает все необходимые маршруты для API, включая аутентификацию,
+// управление секретами, загрузку/скачивание файлов, а также Swagger UI.
+//
+// Параметры:
+// - storage: хранилище данных PostgreSQL для работы с секретами и пользователями
+// - fileStorage: хранилище файлов для загрузки и скачивания файлов
+//
 // Возвращает настроенный маршрутизатор и ошибку, если она возникла.
 func NewRouter(storage *pg.Storage, fileStorage file.FileStorage) (chi.Router, error) {
 	router := chi.NewRouter()

@@ -1,3 +1,6 @@
+// Package testhelpers предоставляет вспомогательные функции для тестирования хранилищ.
+// Пакет содержит функции для создания тестовых контейнеров PostgreSQL и MinIO
+// с использованием testcontainers для интеграционного тестирования.
 package testhelpers
 
 import (
@@ -9,11 +12,17 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+// PostgresContainer представляет тестовый контейнер PostgreSQL.
+// Структура содержит контейнер PostgreSQL и строку подключения к нему
+// для использования в интеграционных тестах.
 type PostgresContainer struct {
 	*postgres.PostgresContainer
 	ConnectionString string
 }
 
+// CreatePostgresContainer создает тестовый контейнер PostgreSQL.
+// Функция запускает контейнер PostgreSQL с предустановленными настройками
+// и возвращает структуру с контейнером и строкой подключения.
 func CreatePostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 	pgContainer, err := postgres.Run(ctx,
 		"postgres:15.3-alpine",

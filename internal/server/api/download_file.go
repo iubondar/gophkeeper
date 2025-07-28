@@ -13,17 +13,24 @@ import (
 	"go.uber.org/zap"
 )
 
-// DownloadFileUsecase интерфейс для скачивания файлов
+// DownloadFileUsecase определяет интерфейс для скачивания файлов с сервера.
+// Интерфейс используется для абстракции бизнес-логики скачивания файлов
+// и позволяет тестировать обработчики с помощью моков.
 type DownloadFileUsecase interface {
 	DownloadFile(ctx context.Context, label string, userID uuid.UUID) (io.ReadCloser, error)
 }
 
-// DownloadFileHandler обрабатывает запросы скачивания файлов
+// DownloadFileHandler обрабатывает HTTP-запросы для скачивания файлов.
+// Обработчик реализует endpoint /api/files/{label}/download и требует аутентификации пользователя.
+// Возвращает файл в формате application/octet-stream для скачивания.
 type DownloadFileHandler struct {
 	uc DownloadFileUsecase
 }
 
-// NewDownloadFileHandler создает новый экземпляр DownloadFileHandler
+// NewDownloadFileHandler создает новый экземпляр DownloadFileHandler.
+// Принимает usecase для скачивания файлов.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики скачивания файлов.
 func NewDownloadFileHandler(uc DownloadFileUsecase) *DownloadFileHandler {
 	return &DownloadFileHandler{uc: uc}
 }

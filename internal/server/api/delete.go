@@ -10,12 +10,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// DeleteHandler обрабатывает запросы удаления секретов
+// DeleteHandler обрабатывает HTTP-запросы для удаления секретов.
+// Обработчик реализует endpoint /api/delete и требует аутентификации пользователя.
+// Использует usecase-слой для удаления секретов из хранилища по имени.
 type DeleteHandler struct {
 	uc usecase.DeleteSecretUsecase
 }
 
-// NewDeleteHandler создает новый экземпляр DeleteHandler
+// NewDeleteHandler создает новый экземпляр DeleteHandler.
+// Принимает usecase для удаления секретов.
+// Функция используется для внедрения зависимостей и создания обработчика
+// с конкретной реализацией бизнес-логики удаления секретов.
 func NewDeleteHandler(uc usecase.DeleteSecretUsecase) *DeleteHandler {
 	return &DeleteHandler{uc: uc}
 }
