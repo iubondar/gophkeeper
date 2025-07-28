@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,7 +28,16 @@ func NewAPIClient(serverURL string) *APIClient {
 	if !strings.HasPrefix(serverURL, "http://") && !strings.HasPrefix(serverURL, "https://") {
 		serverURL = "https://" + serverURL
 	}
+
 	client := resty.New().SetBaseURL(serverURL)
+
+	// Для localhost игнорируем проверку сертификата (для разработки)
+	if strings.Contains(serverURL, "localhost") {
+		client.SetTLSClientConfig(&tls.Config{
+			InsecureSkipVerify: true,
+		})
+	}
+
 	return &APIClient{httpc: client}
 }
 
