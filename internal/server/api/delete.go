@@ -10,14 +10,30 @@ import (
 	"go.uber.org/zap"
 )
 
+// DeleteHandler обрабатывает запросы удаления секретов
 type DeleteHandler struct {
 	uc usecase.DeleteSecretUsecase
 }
 
+// NewDeleteHandler создает новый экземпляр DeleteHandler
 func NewDeleteHandler(uc usecase.DeleteSecretUsecase) *DeleteHandler {
 	return &DeleteHandler{uc: uc}
 }
 
+// DeleteSecret godoc
+// @Summary Удаление секрета
+// @Description Удаляет секрет с сервера по имени
+// @Tags secrets
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param name query string true "Имя секрета для удаления"
+// @Success 204 "Секрет успешно удален"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 401 {object} models.JSONError "Неавторизованный доступ"
+// @Failure 404 {object} models.JSONError "Секрет не найден"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/delete [delete]
 func (handler DeleteHandler) DeleteSecret(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodDelete {
 		models.EncodeError(res, "Only DELETE requests are allowed!", http.StatusMethodNotAllowed)

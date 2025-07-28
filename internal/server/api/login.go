@@ -11,16 +11,30 @@ import (
 	"go.uber.org/zap"
 )
 
+// LoginHandler обрабатывает запросы входа пользователей
 type LoginHandler struct {
 	uc usecase.LoginUsecase
 }
 
+// NewLoginHandler создает новый экземпляр LoginHandler
 func NewLoginHandler(uc usecase.LoginUsecase) *LoginHandler {
 	return &LoginHandler{
 		uc: uc,
 	}
 }
 
+// Login godoc
+// @Summary Вход пользователя в систему
+// @Description Возвращает соль для хеширования пароля
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.LoginIn true "Данные для входа"
+// @Success 200 {object} models.LoginOut "Успешный вход, возвращена соль"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 404 {object} models.JSONError "Пользователь не найден"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/login [post]
 func (handler LoginHandler) Login(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		models.EncodeError(res, "Only POST requests are allowed!", http.StatusMethodNotAllowed)

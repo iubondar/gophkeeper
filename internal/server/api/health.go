@@ -29,9 +29,15 @@ func NewHealthHandler(checker StatusChecker) HealthHandler {
 	}
 }
 
-// Health обрабатывает HTTP GET запрос для проверки доступности сервиса.
-// Проверяет подключение к хранилищу данных.
-// Возвращает статус 200 OK в случае успеха или 500 Internal Server Error при ошибке.
+// Health godoc
+// @Summary Проверка здоровья сервиса
+// @Description Проверяет доступность сервиса и подключение к хранилищу данных
+// @Tags health
+// @Accept json
+// @Produce json
+// @Success 200 "Сервис работает нормально"
+// @Failure 500 {object} models.JSONError "Сервис недоступен"
+// @Router /health [get]
 func (handler HealthHandler) Health(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		models.EncodeError(res, "Only GET requests are allowed!", http.StatusMethodNotAllowed)

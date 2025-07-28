@@ -11,15 +11,30 @@ import (
 	"go.uber.org/zap"
 )
 
+// VersionHandler обрабатывает запросы получения версий секретов
 type VersionHandler struct {
 	uc usecase.GetSecretUsecase
 }
 
+// NewVersionHandler создает новый экземпляр VersionHandler
 func NewVersionHandler(uc usecase.GetSecretUsecase) *VersionHandler {
 	return &VersionHandler{uc: uc}
 }
 
-// GetSecretVersionHandler возвращает только версию секрета по имени
+// GetSecretVersionHandler godoc
+// @Summary Получение версии секрета
+// @Description Возвращает только версию секрета по имени
+// @Tags secrets
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param name query string true "Имя секрета"
+// @Success 200 {object} map[string]int "Версия секрета"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 401 {object} models.JSONError "Неавторизованный доступ"
+// @Failure 404 {object} models.JSONError "Секрет не найден"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/version [get]
 func (handler VersionHandler) GetSecretVersion(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		models.EncodeError(res, "Only GET requests are allowed!", http.StatusMethodNotAllowed)

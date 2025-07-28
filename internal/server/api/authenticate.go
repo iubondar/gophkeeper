@@ -12,16 +12,30 @@ import (
 	"go.uber.org/zap"
 )
 
+// AuthenticateHandler обрабатывает запросы аутентификации пользователей
 type AuthenticateHandler struct {
 	uc usecase.AuthenticateUsecase
 }
 
+// NewAuthenticateHandler создает новый экземпляр AuthenticateHandler
 func NewAuthenticateHandler(uc usecase.AuthenticateUsecase) *AuthenticateHandler {
 	return &AuthenticateHandler{
 		uc: uc,
 	}
 }
 
+// Authenticate godoc
+// @Summary Аутентификация пользователя
+// @Description Проверяет хеш пароля и возвращает токены доступа
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.AuthenticateIn true "Данные для аутентификации"
+// @Success 200 {object} models.AuthenticateOut "Успешная аутентификация, возвращены токены"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 401 {object} models.JSONError "Неверные учетные данные"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/authenticate [post]
 func (handler AuthenticateHandler) Authenticate(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		models.EncodeError(res, "Only POST requests are allowed!", http.StatusMethodNotAllowed)

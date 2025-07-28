@@ -18,15 +18,32 @@ type UploadFileUsecase interface {
 	UploadFile(ctx context.Context, label, metadata, fileName string, file io.Reader, size int64, userID uuid.UUID) (models.UploadSecretOut, error)
 }
 
+// UploadFileHandler обрабатывает запросы загрузки файлов
 type UploadFileHandler struct {
 	uc UploadFileUsecase
 }
 
+// NewUploadFileHandler создает новый экземпляр UploadFileHandler
 func NewUploadFileHandler(uc UploadFileUsecase) *UploadFileHandler {
 	return &UploadFileHandler{uc: uc}
 }
 
-// UploadFile обрабатывает загрузку файла
+// UploadFile godoc
+// @Summary Загрузка файла
+// @Description Загружает зашифрованный файл на сервер
+// @Tags files
+// @Accept multipart/form-data
+// @Produce json
+// @Security ApiKeyAuth
+// @Param file formData file true "Файл для загрузки"
+// @Param label formData string true "Метка файла"
+// @Param metadata formData string false "Метаданные файла"
+// @Success 200 {object} models.UploadSecretOut "Файл успешно загружен"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 401 {object} models.JSONError "Неавторизованный доступ"
+// @Failure 409 {object} models.JSONError "Файл с такой меткой уже существует"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/files [post]
 func (h *UploadFileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		models.EncodeError(w, "Only POST requests are allowed!", http.StatusMethodNotAllowed)

@@ -12,14 +12,30 @@ import (
 	"go.uber.org/zap"
 )
 
+// UpdateHandler обрабатывает запросы обновления секретов
 type UpdateHandler struct {
 	uc usecase.UpdateSecretUsecase
 }
 
+// NewUpdateHandler создает новый экземпляр UpdateHandler
 func NewUpdateHandler(uc usecase.UpdateSecretUsecase) *UpdateHandler {
 	return &UpdateHandler{uc: uc}
 }
 
+// Update godoc
+// @Summary Обновление секрета
+// @Description Обновляет зашифрованный секрет на сервере с проверкой версии
+// @Tags secrets
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body models.UpdateSecretIn true "Данные секрета для обновления"
+// @Success 200 {object} models.UpdateSecretOut "Секрет успешно обновлен"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 401 {object} models.JSONError "Неавторизованный доступ"
+// @Failure 409 {object} models.JSONError "Конфликт версий"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/update [put]
 func (handler UpdateHandler) Update(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPut {
 		models.EncodeError(res, "Only PUT requests are allowed!", http.StatusMethodNotAllowed)

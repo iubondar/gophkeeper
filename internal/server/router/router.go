@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // Возвращает настроенный маршрутизатор и ошибку, если она возникла.
@@ -20,6 +21,14 @@ func NewRouter(storage *pg.Storage, fileStorage file.FileStorage) (chi.Router, e
 
 	healthHandler := api.NewHealthHandler(storage)
 	router.Get("/health", healthHandler.Health)
+
+	// Раздача swagger файлов (swagger.json, docs.go и т.д.)
+	router.Handle("/swagger/*", http.StripPrefix("/swagger/", http.FileServer(http.Dir("./docs"))))
+
+	// Swagger UI (использует swagger.json из /swagger/)
+	router.Get("/swagger-ui/*", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/swagger.json"),
+	))
 
 	registerHandler := api.NewRegisterHandler(usecase.NewRegisterUsecase(storage))
 	loginHandler := api.NewLoginHandler(usecase.NewLoginUsecase(storage))

@@ -12,16 +12,30 @@ import (
 	"go.uber.org/zap"
 )
 
+// RegisterHandler обрабатывает запросы регистрации пользователей
 type RegisterHandler struct {
 	uc usecase.RegisterUsecase
 }
 
+// NewRegisterHandler создает новый экземпляр RegisterHandler
 func NewRegisterHandler(uc usecase.RegisterUsecase) *RegisterHandler {
 	return &RegisterHandler{
 		uc: uc,
 	}
 }
 
+// Register godoc
+// @Summary Регистрация нового пользователя
+// @Description Регистрирует нового пользователя в системе
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.RegisterIn true "Данные для регистрации"
+// @Success 200 {object} models.AuthenticateOut "Успешная регистрация"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 409 {object} models.JSONError "Пользователь уже существует"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/register [post]
 func (handler RegisterHandler) Register(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		models.EncodeError(res, "Only POST requests are allowed!", http.StatusMethodNotAllowed)

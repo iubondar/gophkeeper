@@ -12,14 +12,29 @@ import (
 	"go.uber.org/zap"
 )
 
+// UploadHandler обрабатывает запросы загрузки секретов
 type UploadHandler struct {
 	uc usecase.UploadSecretUsecase
 }
 
+// NewUploadHandler создает новый экземпляр UploadHandler
 func NewUploadHandler(uc usecase.UploadSecretUsecase) *UploadHandler {
 	return &UploadHandler{uc: uc}
 }
 
+// Upload godoc
+// @Summary Загрузка секрета
+// @Description Загружает зашифрованный секрет на сервер
+// @Tags secrets
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body models.UploadSecretIn true "Данные секрета для загрузки"
+// @Success 200 {object} models.UploadSecretOut "Секрет успешно загружен"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 401 {object} models.JSONError "Неавторизованный доступ"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/upload [post]
 func (handler UploadHandler) Upload(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		models.EncodeError(res, "Only POST requests are allowed!", http.StatusMethodNotAllowed)

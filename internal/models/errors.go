@@ -13,19 +13,22 @@ var (
 	ErrUserAlreadyExists    = errors.New("пользователь уже существует")
 )
 
+// JSONError представляет ошибку в формате JSON для API ответов
 type JSONError struct {
-	Message string `json:"message"`
-	Code    int    `json:"code"`
+	Message string `json:"message" example:"Error message"` // Сообщение об ошибке
+	Code    int    `json:"code" example:"400"`              // HTTP код ошибки
 }
 
 func (e *JSONError) Error() string {
 	return e.Message
 }
 
+// NewJSONError создает новый экземпляр JSONError
 func NewJSONError(message string, code int) *JSONError {
 	return &JSONError{Message: message, Code: code}
 }
 
+// Encode кодирует JSONError в HTTP ответ
 func (e *JSONError) Encode(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(e.Code)
@@ -37,6 +40,7 @@ func (e *JSONError) Encode(res http.ResponseWriter) {
 	}
 }
 
+// EncodeError кодирует ошибку в HTTP ответ
 func EncodeError(res http.ResponseWriter, message string, code int) {
 	jsonErr := NewJSONError(message, code)
 	jsonErr.Encode(res)

@@ -18,15 +18,30 @@ type DownloadFileUsecase interface {
 	DownloadFile(ctx context.Context, label string, userID uuid.UUID) (io.ReadCloser, error)
 }
 
+// DownloadFileHandler обрабатывает запросы скачивания файлов
 type DownloadFileHandler struct {
 	uc DownloadFileUsecase
 }
 
+// NewDownloadFileHandler создает новый экземпляр DownloadFileHandler
 func NewDownloadFileHandler(uc DownloadFileUsecase) *DownloadFileHandler {
 	return &DownloadFileHandler{uc: uc}
 }
 
-// DownloadFile обрабатывает скачивание файла
+// DownloadFile godoc
+// @Summary Скачивание файла
+// @Description Скачивает зашифрованный файл с сервера по метке
+// @Tags files
+// @Accept json
+// @Produce application/octet-stream
+// @Security ApiKeyAuth
+// @Param label path string true "Метка файла"
+// @Success 200 {file} file "Файл успешно скачан"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 401 {object} models.JSONError "Неавторизованный доступ"
+// @Failure 404 {object} models.JSONError "Файл не найден"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/files/{label}/download [get]
 func (h *DownloadFileHandler) DownloadFile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		models.EncodeError(w, "Only GET requests are allowed!", http.StatusMethodNotAllowed)

@@ -1,4 +1,4 @@
-.PHONY: build-server build-client run-server run-client clean test
+.PHONY: build-server build-client run-server run-client clean test swagger
 
 # Получаем версию из git (если есть тег) или оставляем "unknown"
 VERSION := $(shell git describe --tags 2>/dev/null || echo "unknown")
@@ -19,6 +19,10 @@ build: build-server build-client
 # Запуск тестов
 test:
 	go test ./...
+
+# Генерация Swagger документации
+swagger:
+	swag init -g cmd/gophkeeper-server/main.go -o ./docs
 
 # Запуск сервера
 run-server: build-server

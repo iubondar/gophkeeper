@@ -11,14 +11,30 @@ import (
 	"go.uber.org/zap"
 )
 
+// GetHandler обрабатывает запросы получения секретов
 type GetHandler struct {
 	uc usecase.GetSecretUsecase
 }
 
+// NewGetHandler создает новый экземпляр GetHandler
 func NewGetHandler(uc usecase.GetSecretUsecase) *GetHandler {
 	return &GetHandler{uc: uc}
 }
 
+// GetSecret godoc
+// @Summary Получение секрета
+// @Description Получает зашифрованный секрет с сервера по имени
+// @Tags secrets
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param name query string true "Имя секрета"
+// @Success 200 {object} models.GetSecretOut "Секрет успешно получен"
+// @Failure 400 {object} models.JSONError "Некорректные данные запроса"
+// @Failure 401 {object} models.JSONError "Неавторизованный доступ"
+// @Failure 404 {object} models.JSONError "Секрет не найден"
+// @Failure 500 {object} models.JSONError "Внутренняя ошибка сервера"
+// @Router /api/get [get]
 func (handler GetHandler) GetSecret(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		models.EncodeError(res, "Only GET requests are allowed!", http.StatusMethodNotAllowed)
