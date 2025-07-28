@@ -1,9 +1,5 @@
 package shell
 
-import (
-	"gophkeeper/internal/client/display"
-)
-
 // MenuItem представляет элемент меню
 type MenuItem struct {
 	ID          string
@@ -30,6 +26,7 @@ type MenuManager struct {
 	states       map[string]MenuState
 	currentState string
 	actionState  *ActionState // Сохраняем выбранное действие и тип
+	display      Display      // Инжектированный Display интерфейс
 }
 
 // NewMenuManager создает новый менеджер меню
@@ -38,6 +35,7 @@ func NewMenuManager() *MenuManager {
 		states:       make(map[string]MenuState),
 		currentState: MenuStateMain,
 		actionState:  nil,
+		display:      nil, // Будет установлен позже
 	}
 
 	// Главное меню
@@ -150,19 +148,28 @@ func NewMenuManager() *MenuManager {
 	return manager
 }
 
+// SetDisplay устанавливает Display интерфейс для MenuManager
+func (m *MenuManager) SetDisplay(display Display) {
+	m.display = display
+}
+
 // ShowMenu отображает текущее меню
 func (m *MenuManager) ShowMenu() {
 	state, exists := m.states[m.currentState]
 	if !exists {
-		display.MenuError("Ошибка: состояние меню не найдено")
+		if m.display != nil {
+			m.display.MenuError("Ошибка: состояние меню не найдено")
+		}
 		return
 	}
 
-	display.MenuTitle(state.Title)
-	for _, item := range state.Items {
-		display.MenuItem(item.ID, item.Title, item.Description)
+	if m.display != nil {
+		m.display.MenuTitle(state.Title)
+		for _, item := range state.Items {
+			m.display.MenuItem(item.ID, item.Title, item.Description)
+		}
+		m.display.MenuChoice()
 	}
-	display.MenuChoice()
 }
 
 // GetCommandByID возвращает команду по ID пункта меню

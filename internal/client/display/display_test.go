@@ -28,6 +28,7 @@ func captureOutput(f func()) string {
 }
 
 func TestDisplayTextSecret(t *testing.T) {
+	display := NewDisplay()
 	tests := []struct {
 		name     string
 		secret   *models.TextSecretData
@@ -57,7 +58,7 @@ func TestDisplayTextSecret(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			output := captureOutput(func() {
-				DisplayTextSecret(tt.secret, tt.metadata)
+				display.DisplayTextSecret(tt.secret, tt.metadata)
 			})
 
 			if output != tt.want {
@@ -68,6 +69,7 @@ func TestDisplayTextSecret(t *testing.T) {
 }
 
 func TestDisplayLoginPassword(t *testing.T) {
+	display := NewDisplay()
 	tests := []struct {
 		name     string
 		secret   *models.LoginPasswordData
@@ -101,7 +103,7 @@ func TestDisplayLoginPassword(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			output := captureOutput(func() {
-				DisplayLoginPassword(tt.secret, tt.metadata)
+				display.DisplayLoginPassword(tt.secret, tt.metadata)
 			})
 
 			if output != tt.want {
@@ -112,6 +114,7 @@ func TestDisplayLoginPassword(t *testing.T) {
 }
 
 func TestDisplayCardData(t *testing.T) {
+	display := NewDisplay()
 	tests := []struct {
 		name     string
 		secret   *models.CardData
@@ -147,7 +150,7 @@ func TestDisplayCardData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			output := captureOutput(func() {
-				DisplayCardData(tt.secret, tt.metadata)
+				display.DisplayCardData(tt.secret, tt.metadata)
 			})
 
 			if output != tt.want {
@@ -158,6 +161,7 @@ func TestDisplayCardData(t *testing.T) {
 }
 
 func TestDisplayFileData(t *testing.T) {
+	display := NewDisplay()
 	tests := []struct {
 		name     string
 		secret   *models.FileData
@@ -214,7 +218,7 @@ func TestDisplayFileData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			output := captureOutput(func() {
-				DisplayFileData(tt.secret, tt.metadata)
+				display.DisplayFileData(tt.secret, tt.metadata)
 			})
 
 			if output != tt.want {
@@ -225,6 +229,7 @@ func TestDisplayFileData(t *testing.T) {
 }
 
 func TestDisplaySecretInfo(t *testing.T) {
+	display := NewDisplay()
 	tests := []struct {
 		name       string
 		secretName string
@@ -262,7 +267,7 @@ func TestDisplaySecretInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			output := captureOutput(func() {
-				DisplaySecretInfo(tt.secretName, tt.secretType, tt.metadata, tt.version)
+				display.DisplaySecretInfo(tt.secretName, tt.secretType, tt.metadata, tt.version)
 			})
 
 			if output != tt.want {
@@ -274,6 +279,7 @@ func TestDisplaySecretInfo(t *testing.T) {
 
 // Benchmark тесты для проверки производительности
 func BenchmarkDisplayTextSecret(b *testing.B) {
+	display := NewDisplay()
 	secret := &models.TextSecretData{
 		Name: "Тестовый секрет",
 		Text: "Тестовый текст",
@@ -283,13 +289,14 @@ func BenchmarkDisplayTextSecret(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		output := captureOutput(func() {
-			DisplayTextSecret(secret, metadata)
+			display.DisplayTextSecret(secret, metadata)
 		})
 		_ = output // Используем output чтобы избежать оптимизации
 	}
 }
 
 func BenchmarkDisplayLoginPassword(b *testing.B) {
+	display := NewDisplay()
 	secret := &models.LoginPasswordData{
 		Name:     "Тестовый аккаунт",
 		Login:    "test@example.com",
@@ -301,13 +308,14 @@ func BenchmarkDisplayLoginPassword(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		output := captureOutput(func() {
-			DisplayLoginPassword(secret, metadata)
+			display.DisplayLoginPassword(secret, metadata)
 		})
 		_ = output
 	}
 }
 
 func BenchmarkDisplayCardData(b *testing.B) {
+	display := NewDisplay()
 	secret := &models.CardData{
 		Name:   "Тестовая карта",
 		Number: "1234 5678 9012 3456",
@@ -320,13 +328,14 @@ func BenchmarkDisplayCardData(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		output := captureOutput(func() {
-			DisplayCardData(secret, metadata)
+			display.DisplayCardData(secret, metadata)
 		})
 		_ = output
 	}
 }
 
 func BenchmarkDisplayFileData(b *testing.B) {
+	display := NewDisplay()
 	secret := &models.FileData{
 		Name:     "Тестовый файл",
 		FilePath: "test.pdf",
@@ -336,13 +345,14 @@ func BenchmarkDisplayFileData(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		output := captureOutput(func() {
-			DisplayFileData(secret, metadata)
+			display.DisplayFileData(secret, metadata)
 		})
 		_ = output
 	}
 }
 
 func BenchmarkDisplaySecretInfo(b *testing.B) {
+	display := NewDisplay()
 	secretName := "Тестовый секрет"
 	secretType := "text"
 	metadata := "Тестовые метаданные"
@@ -351,7 +361,7 @@ func BenchmarkDisplaySecretInfo(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		output := captureOutput(func() {
-			DisplaySecretInfo(secretName, secretType, metadata, version)
+			display.DisplaySecretInfo(secretName, secretType, metadata, version)
 		})
 		_ = output
 	}

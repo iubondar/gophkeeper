@@ -32,7 +32,7 @@ func main() {
 	commandRegistry := makeCommandRegistry(apiClient, crypto)
 
 	// Создаем и запускаем интерактивный интерфейс
-	shell := shell.NewShell(commandRegistry, Version, BuildTime)
+	shell := shell.NewShellWithDefaults(commandRegistry, Version, BuildTime)
 	if err := shell.Run(); err != nil {
 		log.Fatal(err)
 	}

@@ -11,34 +11,44 @@ import (
 
 // Shell представляет интерактивный интерфейс для работы с GophKeeper
 type Shell struct {
-	commandRegistry *cmd.CommandRegistry
+	commandRegistry CommandRegistry
 	menuManager     *MenuManager
-	inputHandler    *input.InputHandler
+	inputHandler    InputHandler
+	display         Display
 	version         string
 	buildTime       string
 }
 
 // NewShell создает новый экземпляр Shell
-func NewShell(registry *cmd.CommandRegistry, version, buildTime string) *Shell {
+func NewShell(registry CommandRegistry, inputHandler InputHandler, display Display, version, buildTime string) *Shell {
+	menuManager := NewMenuManager()
+	menuManager.SetDisplay(display)
+
 	return &Shell{
 		commandRegistry: registry,
-		menuManager:     NewMenuManager(),
-		inputHandler:    input.NewInputHandler(),
+		menuManager:     menuManager,
+		inputHandler:    inputHandler,
+		display:         display,
 		version:         version,
 		buildTime:       buildTime,
 	}
 }
 
+// NewShellWithDefaults создает Shell с дефолтными зависимостями
+func NewShellWithDefaults(registry *cmd.CommandRegistry, version, buildTime string) *Shell {
+	return NewShell(registry, input.NewInputHandler(), display.NewDisplay(), version, buildTime)
+}
+
 // Run запускает интерактивный интерфейс
 func (s *Shell) Run() error {
-	display.Welcome()
+	s.display.Welcome()
 
 	// Проверяем доступность сервера
 	if err := s.checkServerHealth(); err != nil {
 		return fmt.Errorf("ошибка подключения к серверу: %w", err)
 	}
 
-	display.ServerConnected()
+	s.display.ServerConnected()
 
 	// Основной цикл меню
 	for {
@@ -47,7 +57,7 @@ func (s *Shell) Run() error {
 
 		commandName, exists := s.menuManager.GetCommandByID(choice)
 		if !exists {
-			display.InvalidChoice()
+			s.display.InvalidChoice()
 			continue
 		}
 
@@ -77,11 +87,11 @@ func (s *Shell) Run() error {
 			continue
 		default:
 			if result, err := s.executeCommand(commandName); err != nil {
-				display.ErrorMsg(err)
+				s.display.ErrorMsg(err)
 			} else {
 				s.handleCommandResult(commandName, result)
 				if (commandName == CommandRegister || commandName == CommandLogin) && s.menuManager.GetCurrentState() == MenuStateMain {
-					display.SwitchToUserMenuNotice()
+					s.display.SwitchToUserMenuNotice()
 					s.menuManager.SwitchToState(MenuStateAuthenticated)
 				}
 			}
@@ -102,14 +112,14 @@ func (s *Shell) executeCommand(commandName string) (any, error) {
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
-		data = *credentials
+		data = credentials
 
 	case CommandLogin:
 		credentials, err := s.inputHandler.GetUserCredentials()
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
-		data = *credentials
+		data = credentials
 
 	case CommandGet, CommandDelete:
 		secretName, err := s.inputHandler.GetSecretName()
@@ -169,21 +179,21 @@ func (s *Shell) displaySecretResult(result *cmd.GetSecretResult) {
 	switch result.Type {
 	case models.SecretTypeText:
 		if textSecret, ok := result.Data.(*models.TextSecretData); ok {
-			display.DisplayTextSecret(textSecret, result.Metadata)
+			s.display.DisplayTextSecret(textSecret, result.Metadata)
 		}
 	case models.SecretTypeLoginPassword:
 		if loginPassword, ok := result.Data.(*models.LoginPasswordData); ok {
-			display.DisplayLoginPassword(loginPassword, result.Metadata)
+			s.display.DisplayLoginPassword(loginPassword, result.Metadata)
 		}
 	case models.SecretTypeCard:
 		if cardData, ok := result.Data.(*models.CardData); ok {
-			display.DisplayCardData(cardData, result.Metadata)
+			s.display.DisplayCardData(cardData, result.Metadata)
 		}
 	case models.SecretTypeFile:
 		if fileData, ok := result.Data.(*models.FileData); ok {
-			display.DisplayFileData(fileData, result.Metadata)
+			s.display.DisplayFileData(fileData, result.Metadata)
 			// Для файлов дополнительно показываем сообщение о скачивании
-			display.SuccessDownloadFile(fileData.FilePath)
+			s.display.SuccessDownloadFile(fileData.FilePath)
 		}
 	}
 }
@@ -191,20 +201,20 @@ func (s *Shell) displaySecretResult(result *cmd.GetSecretResult) {
 func (s *Shell) printSuccessMessage(commandName string) {
 	switch commandName {
 	case CommandRegister:
-		display.SuccessRegistration()
+		s.display.SuccessRegistration()
 	case CommandLogin:
-		display.SuccessLogin()
+		s.display.SuccessLogin()
 	case CommandUpload:
-		display.SuccessUpload()
+		s.display.SuccessUpload()
 	case CommandUpdate:
-		display.SuccessUpdate()
+		s.display.SuccessUpdate()
 	case CommandGet:
-		display.SuccessGet()
+		s.display.SuccessGet()
 	case CommandDelete:
-		display.SuccessDelete()
+		s.display.SuccessDelete()
 
 	default:
-		display.SuccessGeneric(commandName)
+		s.display.SuccessGeneric(commandName)
 	}
 }
 
@@ -216,19 +226,19 @@ func (s *Shell) checkServerHealth() error {
 
 // Добавляем приватные методы-обработчики
 func (s *Shell) handleExitCommand() error {
-	display.Goodbye()
+	s.display.Goodbye()
 	return nil
 }
 
 func (s *Shell) handleLogoutCommand() {
 	s.menuManager.SwitchToState(MenuStateMain)
 	s.menuManager.ClearActionState()
-	display.Logout()
+	s.display.Logout()
 }
 
 func (s *Shell) handleBackCommand() {
 	if !s.menuManager.GoBack() {
-		display.BackNotAllowed()
+		s.display.BackNotAllowed()
 	}
 }
 
@@ -242,7 +252,7 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 	if actionState != nil {
 		actionState.Type = commandName
 		if result, err := s.executeCommand(actionState.Action); err != nil {
-			display.ErrorMsg(err)
+			s.display.ErrorMsg(err)
 		} else {
 			s.handleCommandResult(actionState.Action, result)
 		}
@@ -253,7 +263,7 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 
 func (s *Shell) handleGetDeleteCommand(commandName string) {
 	if result, err := s.executeCommand(commandName); err != nil {
-		display.ErrorMsg(err)
+		s.display.ErrorMsg(err)
 	} else {
 		s.handleCommandResult(commandName, result)
 	}
@@ -261,10 +271,10 @@ func (s *Shell) handleGetDeleteCommand(commandName string) {
 
 func (s *Shell) handleVersionCommand() {
 	if result, err := s.commandRegistry.Execute(context.Background(), CommandVersion, nil); err != nil {
-		display.ErrorMsg(err)
+		s.display.ErrorMsg(err)
 	} else {
 		if versionResult, ok := result.(*cmd.VersionResult); ok {
-			display.DisplayVersion(versionResult.Version, versionResult.BuildTime)
+			s.display.DisplayVersion(versionResult.Version, versionResult.BuildTime)
 		}
 	}
 }
@@ -273,25 +283,25 @@ func (s *Shell) handleUpdateCommand() {
 	// Получаем название секрета через input
 	secretName, err := s.inputHandler.GetSecretName()
 	if err != nil {
-		display.ErrorMsg(fmt.Errorf("ошибка получения названия секрета: %w", err))
+		s.display.ErrorMsg(fmt.Errorf("ошибка получения названия секрета: %w", err))
 		return
 	}
 
 	// Получаем данные секрета через команду show
 	showResult, err := s.commandRegistry.Execute(context.Background(), CommandShow, secretName)
 	if err != nil {
-		display.ErrorMsg(fmt.Errorf("ошибка при получении данных секрета: %w", err))
+		s.display.ErrorMsg(fmt.Errorf("ошибка при получении данных секрета: %w", err))
 		return
 	}
 
 	showData, ok := showResult.(*cmd.ShowSecretResult)
 	if !ok {
-		display.ErrorMsg(fmt.Errorf("неверный формат данных секрета"))
+		s.display.ErrorMsg(fmt.Errorf("неверный формат данных секрета"))
 		return
 	}
 
 	// Отображаем информацию о секрете через display
-	display.DisplaySecretInfo(secretName, showData.Type, showData.Metadata, showData.Version)
+	s.display.DisplaySecretInfo(secretName, showData.Type, showData.Metadata, showData.Version)
 
 	// Запрашиваем ввод новых данных через input
 	s.inputHandler.PromptEnterNewData()
@@ -308,12 +318,12 @@ func (s *Shell) handleUpdateCommand() {
 	case models.SecretTypeFile:
 		updatedData, err = s.inputHandler.GetUpdatedFileData(secretName)
 	default:
-		display.ErrorMsg(fmt.Errorf("неподдерживаемый тип секрета: %s", showData.Type))
+		s.display.ErrorMsg(fmt.Errorf("неподдерживаемый тип секрета: %s", showData.Type))
 		return
 	}
 
 	if err != nil {
-		display.ErrorMsg(fmt.Errorf("ошибка при получении обновленных данных: %w", err))
+		s.display.ErrorMsg(fmt.Errorf("ошибка при получении обновленных данных: %w", err))
 		return
 	}
 
@@ -327,7 +337,7 @@ func (s *Shell) handleUpdateCommand() {
 
 	// Выполняем обновление
 	if result, err := s.commandRegistry.Execute(context.Background(), CommandUpdate, updateData); err != nil {
-		display.ErrorMsg(err)
+		s.display.ErrorMsg(err)
 	} else {
 		s.handleCommandResult(CommandUpdate, result)
 	}
