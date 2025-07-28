@@ -112,14 +112,14 @@ func (s *Shell) executeCommand(commandName string) (any, error) {
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
-		data = credentials
+		data = *credentials
 
 	case CommandLogin:
 		credentials, err := s.inputHandler.GetUserCredentials()
 		if err != nil {
 			return nil, fmt.Errorf("ошибка получения данных пользователя: %w", err)
 		}
-		data = credentials
+		data = *credentials
 
 	case CommandGet, CommandDelete:
 		secretName, err := s.inputHandler.GetSecretName()
