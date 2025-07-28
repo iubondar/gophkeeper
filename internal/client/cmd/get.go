@@ -4,13 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/os_utils"
 	"io"
 	"os"
 	"path/filepath"
 )
+
+// CryptoDecryptor интерфейс для расшифровки данных
+type CryptoDecryptor interface {
+	DecryptString(encryptedData []byte) (string, error)
+	DecryptStream(reader io.Reader) (io.ReadCloser, error)
+}
 
 // GetSecretResult представляет результат выполнения команды get
 type GetSecretResult struct {
@@ -27,11 +32,11 @@ type GetAPIClient interface {
 // GetCommand представляет команду получения секрета
 type GetCommand struct {
 	apiClient GetAPIClient
-	crypto    *crypto.Crypto
+	crypto    CryptoDecryptor
 }
 
 // NewGetCommand создает новую команду получения
-func NewGetCommand(apiClient GetAPIClient, crypto *crypto.Crypto) *GetCommand {
+func NewGetCommand(apiClient GetAPIClient, crypto CryptoDecryptor) *GetCommand {
 	return &GetCommand{
 		apiClient: apiClient,
 		crypto:    crypto,
@@ -133,7 +138,7 @@ func handleCardSecret(decryptedData string, metadata string) (*GetSecretResult, 
 	}, nil
 }
 
-func handleFileDownload(apiClient GetAPIClient, crypto *crypto.Crypto, label, metadata, fileName string) (*GetSecretResult, error) {
+func handleFileDownload(apiClient GetAPIClient, crypto CryptoDecryptor, label, metadata, fileName string) (*GetSecretResult, error) {
 	// Скачиваем файл с сервера
 	reader, err := apiClient.DownloadFile(context.Background(), label)
 	if err != nil {

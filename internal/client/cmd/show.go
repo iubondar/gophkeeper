@@ -4,9 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
 )
+
+// ShowCryptoDecryptor интерфейс для расшифровки данных
+type ShowCryptoDecryptor interface {
+	DecryptString(encryptedData []byte) (string, error)
+}
 
 // ShowSecretResult представляет результат выполнения команды show
 type ShowSecretResult struct {
@@ -25,11 +29,11 @@ type ShowAPIClient interface {
 // ShowCommand представляет команду отображения секрета
 type ShowCommand struct {
 	apiClient ShowAPIClient
-	crypto    *crypto.Crypto
+	crypto    ShowCryptoDecryptor
 }
 
 // NewShowCommand создает новую команду отображения
-func NewShowCommand(apiClient ShowAPIClient, crypto *crypto.Crypto) *ShowCommand {
+func NewShowCommand(apiClient ShowAPIClient, crypto ShowCryptoDecryptor) *ShowCommand {
 	return &ShowCommand{
 		apiClient: apiClient,
 		crypto:    crypto,

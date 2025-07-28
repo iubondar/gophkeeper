@@ -4,9 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
 )
+
+// UpdateCryptoEncryptor интерфейс для шифрования данных
+type UpdateCryptoEncryptor interface {
+	EncryptString(plaintext string) ([]byte, error)
+}
 
 // UpdateData представляет данные для обновления секрета
 type UpdateData struct {
@@ -24,11 +28,11 @@ type UpdateAPIClient interface {
 // UpdateCommand представляет команду обновления секрета
 type UpdateCommand struct {
 	apiClient UpdateAPIClient
-	crypto    *crypto.Crypto
+	crypto    UpdateCryptoEncryptor
 }
 
 // NewUpdateCommand создает новую команду обновления
-func NewUpdateCommand(apiClient UpdateAPIClient, crypto *crypto.Crypto) *UpdateCommand {
+func NewUpdateCommand(apiClient UpdateAPIClient, crypto UpdateCryptoEncryptor) *UpdateCommand {
 	return &UpdateCommand{
 		apiClient: apiClient,
 		crypto:    crypto,

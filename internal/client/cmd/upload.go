@@ -5,13 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/os_utils"
 	"io"
 	"os"
 	"path/filepath"
 )
+
+// UploadCryptoEncryptor интерфейс для шифрования данных
+type UploadCryptoEncryptor interface {
+	EncryptString(plaintext string) ([]byte, error)
+	EncryptStream(writer io.Writer) (io.WriteCloser, error)
+}
 
 // UploadAPIClient интерфейс для загрузки секрета
 type UploadAPIClient interface {
@@ -22,11 +27,11 @@ type UploadAPIClient interface {
 // UploadCommand представляет команду загрузки секрета
 type UploadCommand struct {
 	apiClient UploadAPIClient
-	crypto    *crypto.Crypto
+	crypto    UploadCryptoEncryptor
 }
 
 // NewUploadCommand создает новую команду загрузки
-func NewUploadCommand(apiClient UploadAPIClient, crypto *crypto.Crypto) *UploadCommand {
+func NewUploadCommand(apiClient UploadAPIClient, crypto UploadCryptoEncryptor) *UploadCommand {
 	return &UploadCommand{
 		apiClient: apiClient,
 		crypto:    crypto,

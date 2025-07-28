@@ -5,9 +5,20 @@ import (
 	"errors"
 	"testing"
 
-	"gophkeeper/internal/client/crypto"
 	"gophkeeper/internal/models"
 )
+
+// MockUpdateCryptoEncryptor представляет мок для UpdateCryptoEncryptor
+type MockUpdateCryptoEncryptor struct {
+	encryptStringFunc func(plaintext string) ([]byte, error)
+}
+
+func (m *MockUpdateCryptoEncryptor) EncryptString(plaintext string) ([]byte, error) {
+	if m.encryptStringFunc != nil {
+		return m.encryptStringFunc(plaintext)
+	}
+	return []byte("encrypted"), nil
+}
 
 // MockUpdateAPIClient представляет мок для UpdateAPIClient
 type MockUpdateAPIClient struct {
@@ -23,8 +34,8 @@ func (m *MockUpdateAPIClient) UpdateSecret(ctx context.Context, in models.Update
 
 func TestNewUpdateCommand(t *testing.T) {
 	mockAPI := &MockUpdateAPIClient{}
-	crypto := crypto.NewCrypto()
-	cmd := NewUpdateCommand(mockAPI, crypto)
+	mockCrypto := &MockUpdateCryptoEncryptor{}
+	cmd := NewUpdateCommand(mockAPI, mockCrypto)
 
 	if cmd == nil {
 		t.Fatal("NewUpdateCommand returned nil")
@@ -34,7 +45,7 @@ func TestNewUpdateCommand(t *testing.T) {
 		t.Error("apiClient not set correctly")
 	}
 
-	if cmd.crypto != crypto {
+	if cmd.crypto != mockCrypto {
 		t.Error("crypto not set correctly")
 	}
 }
@@ -60,14 +71,89 @@ func TestUpdateCommand_Execute(t *testing.T) {
 				return nil
 			},
 		}
-		crypto := crypto.NewCrypto()
-		// Устанавливаем encryption key для тестирования
-		crypto.SetSalt("testsalt")
-		err := crypto.GenerateAndStoreEncryptionKey("testpass")
-		if err != nil {
-			t.Fatalf("Failed to set encryption key: %v", err)
+		mockCrypto := &MockUpdateCryptoEncryptor{
+			encryptStringFunc: func(plaintext string) ([]byte, error) {
+				return []byte("encrypted"), nil
+			},
 		}
-		cmd := NewUpdateCommand(mockAPI, crypto)
+		cmd := NewUpdateCommand(mockAPI, mockCrypto)
+
+		result, err := cmd.Execute(ctx, updateData)
+
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+
+		if result != nil {
+			t.Errorf("Expected nil result, got %v", result)
+		}
+	})
+
+	t.Run("successful update login password secret", func(t *testing.T) {
+		loginData := &models.LoginPasswordData{
+			Name:     "test-secret",
+			Login:    "updated-login",
+			Password: "updated-password",
+			URL:      "https://example.com",
+			Metadata: "updated metadata",
+		}
+		updateData := &UpdateData{
+			SecretName: "test-secret",
+			Version:    1,
+			Type:       models.SecretTypeLoginPassword,
+			Data:       loginData,
+		}
+
+		mockAPI := &MockUpdateAPIClient{
+			updateSecretFunc: func(ctx context.Context, in models.UpdateSecretIn) error {
+				return nil
+			},
+		}
+		mockCrypto := &MockUpdateCryptoEncryptor{
+			encryptStringFunc: func(plaintext string) ([]byte, error) {
+				return []byte("encrypted"), nil
+			},
+		}
+		cmd := NewUpdateCommand(mockAPI, mockCrypto)
+
+		result, err := cmd.Execute(ctx, updateData)
+
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+
+		if result != nil {
+			t.Errorf("Expected nil result, got %v", result)
+		}
+	})
+
+	t.Run("successful update card secret", func(t *testing.T) {
+		cardData := &models.CardData{
+			Name:     "test-secret",
+			Number:   "1234567890123456",
+			Holder:   "JOHN DOE",
+			Expiry:   "12/25",
+			CVV:      "123",
+			Metadata: "updated metadata",
+		}
+		updateData := &UpdateData{
+			SecretName: "test-secret",
+			Version:    1,
+			Type:       models.SecretTypeCard,
+			Data:       cardData,
+		}
+
+		mockAPI := &MockUpdateAPIClient{
+			updateSecretFunc: func(ctx context.Context, in models.UpdateSecretIn) error {
+				return nil
+			},
+		}
+		mockCrypto := &MockUpdateCryptoEncryptor{
+			encryptStringFunc: func(plaintext string) ([]byte, error) {
+				return []byte("encrypted"), nil
+			},
+		}
+		cmd := NewUpdateCommand(mockAPI, mockCrypto)
 
 		result, err := cmd.Execute(ctx, updateData)
 
@@ -99,14 +185,12 @@ func TestUpdateCommand_Execute(t *testing.T) {
 				return expectedErr
 			},
 		}
-		crypto := crypto.NewCrypto()
-		// Устанавливаем encryption key для тестирования
-		crypto.SetSalt("testsalt")
-		err := crypto.GenerateAndStoreEncryptionKey("testpass")
-		if err != nil {
-			t.Fatalf("Failed to set encryption key: %v", err)
+		mockCrypto := &MockUpdateCryptoEncryptor{
+			encryptStringFunc: func(plaintext string) ([]byte, error) {
+				return []byte("encrypted"), nil
+			},
 		}
-		cmd := NewUpdateCommand(mockAPI, crypto)
+		cmd := NewUpdateCommand(mockAPI, mockCrypto)
 
 		result, err := cmd.Execute(ctx, updateData)
 
@@ -125,8 +209,8 @@ func TestUpdateCommand_Execute(t *testing.T) {
 
 	t.Run("invalid args type", func(t *testing.T) {
 		mockAPI := &MockUpdateAPIClient{}
-		crypto := crypto.NewCrypto()
-		cmd := NewUpdateCommand(mockAPI, crypto)
+		mockCrypto := &MockUpdateCryptoEncryptor{}
+		cmd := NewUpdateCommand(mockAPI, mockCrypto)
 
 		result, err := cmd.Execute(ctx, "invalid args")
 
@@ -152,8 +236,8 @@ func TestUpdateCommand_Execute(t *testing.T) {
 		}
 
 		mockAPI := &MockUpdateAPIClient{}
-		crypto := crypto.NewCrypto()
-		cmd := NewUpdateCommand(mockAPI, crypto)
+		mockCrypto := &MockUpdateCryptoEncryptor{}
+		cmd := NewUpdateCommand(mockAPI, mockCrypto)
 
 		result, err := cmd.Execute(ctx, updateData)
 
@@ -173,8 +257,8 @@ func TestUpdateCommand_Execute(t *testing.T) {
 
 func TestUpdateCommand_GetName(t *testing.T) {
 	mockAPI := &MockUpdateAPIClient{}
-	crypto := crypto.NewCrypto()
-	cmd := NewUpdateCommand(mockAPI, crypto)
+	mockCrypto := &MockUpdateCryptoEncryptor{}
+	cmd := NewUpdateCommand(mockAPI, mockCrypto)
 
 	name := cmd.GetName()
 	if name != "update" {
@@ -184,8 +268,8 @@ func TestUpdateCommand_GetName(t *testing.T) {
 
 func TestUpdateCommand_GetDescription(t *testing.T) {
 	mockAPI := &MockUpdateAPIClient{}
-	crypto := crypto.NewCrypto()
-	cmd := NewUpdateCommand(mockAPI, crypto)
+	mockCrypto := &MockUpdateCryptoEncryptor{}
+	cmd := NewUpdateCommand(mockAPI, mockCrypto)
 
 	description := cmd.GetDescription()
 	expected := "Обновить секрет на сервере"
