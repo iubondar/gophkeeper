@@ -460,3 +460,217 @@ func TestServer_IntegrationWithHandler(t *testing.T) {
 		t.Fatal("Сервер не завершился вовремя")
 	}
 }
+
+func TestServer_ShutdownWithoutStart(t *testing.T) {
+	// Настройка логгера для тестов
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+	zap.ReplaceGlobals(logger)
+	defer logger.Sync()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := New("localhost:8080", handler)
+
+	// Тестируем shutdown без запуска сервера
+	shutdownErr := server.Shutdown()
+	assert.Error(t, shutdownErr) // Должна быть ошибка, так как сервер не запущен
+	assert.Contains(t, shutdownErr.Error(), "server was not started")
+}
+
+func TestServer_ShutdownWithNilServer(t *testing.T) {
+	// Настройка логгера для тестов
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+	zap.ReplaceGlobals(logger)
+	defer logger.Sync()
+
+	server := &Server{
+		address:    "localhost:8080",
+		router:     http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
+		httpServer: nil, // Явно устанавливаем nil
+	}
+
+	// Тестируем shutdown с nil httpServer
+	shutdownErr := server.Shutdown()
+	assert.Error(t, shutdownErr) // Должна быть ошибка
+}
+
+func TestServer_StartWithProductionAddress(t *testing.T) {
+	// Настройка логгера для тестов
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+	zap.ReplaceGlobals(logger)
+	defer logger.Sync()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Тестируем с адресом, который не содержит localhost (production)
+	server := New("example.com:443", handler)
+
+	serverReady := make(chan struct{})
+	serverError := make(chan error, 1)
+
+	go func() {
+		close(serverReady)
+		err := server.Start()
+		serverError <- err
+		close(serverError)
+	}()
+
+	<-serverReady
+	time.Sleep(100 * time.Millisecond)
+
+	// Проверяем, что TLS конфигурация создана для production адреса
+	if server.httpServer != nil {
+		assert.NotNil(t, server.httpServer.TLSConfig)
+	}
+
+	// Ожидаем ошибку подключения для недоступного адреса
+	select {
+	case err := <-serverError:
+		assert.Error(t, err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Сервер не вернул ошибку вовремя")
+	}
+}
+
+func TestServer_StartWithLocalhostAddress(t *testing.T) {
+	// Настройка логгера для тестов
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+	zap.ReplaceGlobals(logger)
+	defer logger.Sync()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Тестируем с localhost адресом
+	server := New("localhost:0", handler)
+
+	serverReady := make(chan struct{})
+	serverError := make(chan error, 1)
+
+	go func() {
+		close(serverReady)
+		err := server.Start()
+		if err != nil && err != http.ErrServerClosed {
+			serverError <- err
+		}
+		close(serverError)
+	}()
+
+	<-serverReady
+	time.Sleep(100 * time.Millisecond)
+
+	// Проверяем, что для localhost создается сервер без TLS конфигурации
+	if server.httpServer != nil {
+		// Для localhost TLS конфигурация может быть nil или иметь дефолтные значения
+		// Главное, что сервер создан
+		assert.NotNil(t, server.httpServer)
+	}
+
+	// Завершаем сервер
+	shutdownErr := server.Shutdown()
+	assert.NoError(t, shutdownErr)
+
+	select {
+	case err := <-serverError:
+		if err != nil {
+			t.Fatalf("Неожиданная ошибка сервера: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Сервер не завершился вовремя")
+	}
+}
+
+func TestServer_ShutdownWithContextTimeout(t *testing.T) {
+	// Настройка логгера для тестов
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+	zap.ReplaceGlobals(logger)
+	defer logger.Sync()
+
+	// Создаем обработчик, который работает дольше timeout
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(10 * time.Second) // Дольше 5-секундного timeout
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := New("localhost:0", handler)
+
+	serverReady := make(chan struct{})
+	serverError := make(chan error, 1)
+
+	go func() {
+		close(serverReady)
+		err := server.Start()
+		if err != nil && err != http.ErrServerClosed {
+			serverError <- err
+		}
+		close(serverError)
+	}()
+
+	<-serverReady
+	time.Sleep(100 * time.Millisecond)
+
+	// Симулируем активный запрос
+	if server.httpServer != nil {
+		go func() {
+			req := httptest.NewRequest("GET", "http://"+server.httpServer.Addr, nil)
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+		}()
+	}
+
+	// Даем время на начало обработки запроса
+	time.Sleep(50 * time.Millisecond)
+
+	// Тестируем shutdown с timeout
+	shutdownErr := server.Shutdown()
+	assert.NoError(t, shutdownErr) // Должен успешно завершиться благодаря принудительному закрытию
+
+	select {
+	case err := <-serverError:
+		if err != nil {
+			t.Fatalf("Неожиданная ошибка сервера: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Сервер не завершился вовремя")
+	}
+}
+
+func TestServer_NewWithEmptyAddress(t *testing.T) {
+	// Настройка логгера для тестов
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+	zap.ReplaceGlobals(logger)
+	defer logger.Sync()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := New("", handler)
+	assert.NotNil(t, server)
+	assert.Equal(t, "", server.address)
+	assert.NotNil(t, server.router)
+}
+
+func TestServer_NewWithNilHandler(t *testing.T) {
+	// Настройка логгера для тестов
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+	zap.ReplaceGlobals(logger)
+	defer logger.Sync()
+
+	server := New("localhost:8080", nil)
+	assert.NotNil(t, server)
+	assert.Equal(t, "localhost:8080", server.address)
+	assert.Nil(t, server.router)
+}

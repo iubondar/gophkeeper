@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -92,6 +93,11 @@ func (s *Server) Start() error {
 
 // Shutdown выполняет graceful shutdown сервера
 func (s *Server) Shutdown() error {
+	// Проверяем, что сервер был инициализирован
+	if s.httpServer == nil {
+		return fmt.Errorf("server was not started")
+	}
+
 	// Устанавливаем таймаут 5 секунд для завершения текущих запросов
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
