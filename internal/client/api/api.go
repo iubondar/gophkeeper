@@ -23,8 +23,9 @@ type APIClient struct {
 }
 
 func NewAPIClient(serverURL string) *APIClient {
-	if !strings.HasPrefix(serverURL, "http") {
-		serverURL = "http://" + serverURL
+	// Проверяем, начинается ли URL с протокола
+	if !strings.HasPrefix(serverURL, "http://") && !strings.HasPrefix(serverURL, "https://") {
+		serverURL = "https://" + serverURL
 	}
 	client := resty.New().SetBaseURL(serverURL)
 	return &APIClient{httpc: client}
