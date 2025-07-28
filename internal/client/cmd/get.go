@@ -52,9 +52,16 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 	}
 
 	// Для файлов используем специальную логику скачивания
-	// Файлы не шифруются в EncryptedData, а хранятся в файловом хранилище
 	if secret.Type == models.SecretTypeFile {
 		return handleFileDownload(c.apiClient, c.crypto, secret.Label, secret.Metadata, secret.FileName)
+	}
+
+	// Проверяем поддерживаемый тип до расшифровки
+	switch secret.Type {
+	case models.SecretTypeText, models.SecretTypeLoginPassword, models.SecretTypeCard:
+		// ok
+	default:
+		return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 	}
 
 	// Расшифровываем данные секрета для всех остальных типов
@@ -73,10 +80,9 @@ func (c *GetCommand) Execute(ctx context.Context, args any) (any, error) {
 
 	case models.SecretTypeCard:
 		return handleCardSecret(decryptedData, secret.Metadata)
-
-	default:
-		return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 	}
+
+	return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 }
 
 // GetName возвращает имя команды

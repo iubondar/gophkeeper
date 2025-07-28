@@ -78,6 +78,14 @@ func (c *ShowCommand) Execute(ctx context.Context, args any) (any, error) {
 		}, nil
 	}
 
+	// Проверяем поддерживаемый тип до расшифровки
+	switch secret.Type {
+	case models.SecretTypeText, models.SecretTypeLoginPassword, models.SecretTypeCard:
+		// ok
+	default:
+		return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
+	}
+
 	// Расшифровываем данные секрета для всех остальных типов
 	decryptedData, err := c.crypto.DecryptString(secret.EncryptedData)
 	if err != nil {
@@ -94,10 +102,9 @@ func (c *ShowCommand) Execute(ctx context.Context, args any) (any, error) {
 
 	case models.SecretTypeCard:
 		return handleShowCardSecret(decryptedData, secret.Metadata, version)
-
-	default:
-		return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 	}
+
+	return nil, fmt.Errorf("неподдерживаемый тип секрета: %s", secret.Type)
 }
 
 // GetName возвращает имя команды
