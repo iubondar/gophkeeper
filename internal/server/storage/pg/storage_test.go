@@ -101,6 +101,18 @@ func (s *StorageTestSuite) TestRegister() {
 		s.Require().False(ok)
 		// Это должно вызвать ошибку primary key violation
 	})
+
+	s.Run("database error", func() {
+		// Тест на другие ошибки БД (не UniqueViolation)
+		// Для этого нужно создать ситуацию с неверными данными
+		// Используем слишком длинный login, который превысит ограничение БД
+		longLogin := string(make([]byte, 1000)) // Слишком длинный логин
+		userID3 := uuid.New()
+		ok, err := s.storage.Register(ctx, userID3, longLogin, passwordHash, salt)
+		s.Require().Error(err)
+		s.Require().False(ok)
+		s.Require().NotEqual(models.ErrUserAlreadyExists, err)
+	})
 }
 
 func (s *StorageTestSuite) TestGetUserSalt() {
@@ -124,6 +136,15 @@ func (s *StorageTestSuite) TestGetUserSalt() {
 	s.Run("get salt for non-existing user", func() {
 		retrievedSalt, err := s.storage.GetUserSalt(ctx, "nonexistent")
 		s.Require().NoError(err)
+		s.Require().Equal("", retrievedSalt)
+	})
+
+	s.Run("database error", func() {
+		// Тест на другие ошибки БД (не sql.ErrNoRows)
+		// Используем слишком длинный login для вызова ошибки БД
+		longLogin := string(make([]byte, 1000))
+		retrievedSalt, err := s.storage.GetUserSalt(ctx, longLogin)
+		s.Require().Error(err)
 		s.Require().Equal("", retrievedSalt)
 	})
 }
@@ -155,6 +176,15 @@ func (s *StorageTestSuite) TestGetUserByLoginAndPassword() {
 	s.Run("get user with non-existing login", func() {
 		retrievedUserID, err := s.storage.GetUserByLoginAndPassword(ctx, "nonexistent", passwordHash)
 		s.Require().NoError(err)
+		s.Require().Equal(uuid.Nil, retrievedUserID)
+	})
+
+	s.Run("database error", func() {
+		// Тест на другие ошибки БД (не sql.ErrNoRows)
+		// Используем слишком длинный login для вызова ошибки БД
+		longLogin := string(make([]byte, 1000))
+		retrievedUserID, err := s.storage.GetUserByLoginAndPassword(ctx, longLogin, passwordHash)
+		s.Require().Error(err)
 		s.Require().Equal(uuid.Nil, retrievedUserID)
 	})
 }
@@ -221,6 +251,16 @@ func (s *StorageTestSuite) TestInsertRecord() {
 		s.Require().Error(err)
 		s.Require().Equal(models.ErrConflict, err)
 	})
+
+	s.Run("database error", func() {
+		// Тест на другие ошибки БД (не UniqueViolation)
+		// Используем слишком длинные данные для вызова ошибки БД
+		longLabel := string(make([]byte, 1000))
+		id5 := uuid.New()
+		err = s.storage.InsertRecord(ctx, id5, userID, longLabel, recordType, metadata, encryptedData, fileKey, "", version, createdAt, updatedAt)
+		s.Require().Error(err)
+		s.Require().NotEqual(models.ErrConflict, err)
+	})
 }
 
 func (s *StorageTestSuite) TestGetRecordByLabel() {
@@ -272,6 +312,16 @@ func (s *StorageTestSuite) TestGetRecordByLabel() {
 		s.Require().Equal(models.ErrRecordNotFound, err)
 		s.Require().Nil(result)
 	})
+
+	s.Run("database error", func() {
+		// Тест на другие ошибки БД (не sql.ErrNoRows)
+		// Используем слишком длинный label для вызова ошибки БД
+		longLabel := string(make([]byte, 1000))
+		result, err := s.storage.GetRecordByLabel(ctx, longLabel, userID)
+		s.Require().Error(err)
+		s.Require().NotEqual(models.ErrRecordNotFound, err)
+		s.Require().Nil(result)
+	})
 }
 
 func (s *StorageTestSuite) TestDeleteRecordByLabel() {
@@ -301,6 +351,15 @@ func (s *StorageTestSuite) TestDeleteRecordByLabel() {
 		err := s.storage.DeleteRecordByLabel(ctx, "non-existent", userID)
 		s.Require().Error(err)
 		s.Require().Equal(models.ErrRecordNotFound, err)
+	})
+
+	s.Run("database error", func() {
+		// Тест на ошибки БД
+		// Используем слишком длинный label для вызова ошибки БД
+		longLabel := string(make([]byte, 1000))
+		err := s.storage.DeleteRecordByLabel(ctx, longLabel, userID)
+		s.Require().Error(err)
+		s.Require().NotEqual(models.ErrRecordNotFound, err)
 	})
 }
 
@@ -366,5 +425,14 @@ func (s *StorageTestSuite) TestUpdateRecordByLabel() {
 		_, err = s.storage.UpdateRecordByLabel(ctx, label, otherUserID, recordType, metadata, encryptedData, fileKey, "", 2, time.Now())
 		s.Require().Error(err)
 		s.Require().Equal(models.ErrConflict, err)
+	})
+
+	s.Run("database error", func() {
+		// Тест на ошибки БД
+		// Используем слишком длинные данные для вызова ошибки БД
+		longLabel := string(make([]byte, 1000))
+		_, err := s.storage.UpdateRecordByLabel(ctx, longLabel, userID, recordType, metadata, encryptedData, fileKey, "", 2, time.Now())
+		s.Require().Error(err)
+		s.Require().NotEqual(models.ErrConflict, err)
 	})
 }
