@@ -7,6 +7,7 @@ import (
 	"gophkeeper/internal/server/compress"
 	"gophkeeper/internal/server/storage/file"
 	"gophkeeper/internal/server/storage/pg"
+	"gophkeeper/internal/server/templates"
 	"gophkeeper/internal/server/usecase"
 	"net/http"
 
@@ -18,6 +19,9 @@ import (
 func NewRouter(storage *pg.Storage, fileStorage file.FileStorage) (chi.Router, error) {
 	router := chi.NewRouter()
 	router.Use(compress.WithGzipCompression)
+
+	// Главная страница с информацией о сервисе
+	router.Get("/", handleHomePage)
 
 	healthHandler := api.NewHealthHandler(storage)
 	router.Get("/health", healthHandler.Health)
@@ -64,6 +68,13 @@ func NewRouter(storage *pg.Storage, fileStorage file.FileStorage) (chi.Router, e
 	})
 
 	return router, nil
+}
+
+// handleHomePage отображает главную страницу с информацией о сервисе
+func handleHomePage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(templates.HomePageHTML()))
 }
 
 func handleRefresh(w http.ResponseWriter, r *http.Request) {
