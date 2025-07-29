@@ -46,6 +46,7 @@ func NewRouter(storage *pg.Storage, fileStorage file.FileStorage) (chi.Router, e
 	registerHandler := api.NewRegisterHandler(usecase.NewRegisterUsecase(storage))
 	loginHandler := api.NewLoginHandler(usecase.NewLoginUsecase(storage))
 	authenticateHandler := api.NewAuthenticateHandler(usecase.NewAuthenticateUsecase(storage))
+	refreshHandler := api.NewRefreshHandler(usecase.NewRefreshUsecase())
 	uploadHandler := api.NewUploadHandler(usecase.NewUploadSecretUsecase(storage))
 	getHandler := api.NewGetHandler(usecase.NewGetSecretUsecase(storage))
 	deleteHandler := api.NewDeleteHandler(usecase.NewDeleteSecretUsecase(storage, fileStorage))
@@ -65,7 +66,7 @@ func NewRouter(storage *pg.Storage, fileStorage file.FileStorage) (chi.Router, e
 		r.Post("/register", registerHandler.Register)
 		r.Post("/login", loginHandler.Login)
 		r.Post("/authenticate", authenticateHandler.Authenticate)
-		r.Post("/refresh", handleRefresh)
+		r.Post("/refresh", refreshHandler.Refresh)
 
 		// Защищенные маршруты (требуют аутентификации)
 		r.Route("/", func(r chi.Router) {
@@ -91,10 +92,4 @@ func handleHomePage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(templates.HomePageHTML()))
-}
-
-func handleRefresh(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"access_token": "new-test-token", "refresh_token": "new-test-refresh", "expires_in": 1800}`))
 }

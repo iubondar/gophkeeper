@@ -106,3 +106,16 @@ func getUserID(tokenString string) (userID uuid.UUID, err error) {
 
 	return userID, nil
 }
+
+// ValidateRefreshToken валидирует refresh token и возвращает userID.
+// Функция проверяет подпись токена и его срок действия.
+//
+// Параметры:
+//   - tokenString: строка refresh токена для валидации
+//
+// Возвращает:
+//   - uuid.UUID: идентификатор пользователя или uuid.Nil если токен недействителен
+//   - error: ошибка в случае неудачи
+func ValidateRefreshToken(tokenString string) (userID uuid.UUID, err error) {
+	return getUserID(tokenString)
+}

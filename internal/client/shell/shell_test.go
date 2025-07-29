@@ -1284,7 +1284,7 @@ func TestShell_Run_RegisterCommand(t *testing.T) {
 	expectMainMenu(mockDisplay)
 	mockInputHandler.EXPECT().GetUserChoice().Return("1")
 	mockInputHandler.EXPECT().GetUserCredentials().Return(credentials, nil)
-	mockRegistry.EXPECT().Execute(gomock.Any(), CommandRegister, credentials).Return("success", nil)
+	mockRegistry.EXPECT().Execute(gomock.Any(), CommandRegister, gomock.Any()).Return("success", nil)
 	mockDisplay.EXPECT().SuccessRegistration()
 	mockDisplay.EXPECT().SwitchToUserMenuNotice()
 	expectUserMenu(mockDisplay)

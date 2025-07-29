@@ -47,6 +47,17 @@ type AuthenticateOut struct {
 	RefreshToken string `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."` // Токен обновления
 }
 
+// RefreshIn представляет входные данные для обновления токенов.
+type RefreshIn struct {
+	RefreshToken string `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."` // Токен обновления
+}
+
+// RefreshOut представляет выходные данные для обновления токенов.
+type RefreshOut struct {
+	AccessToken  string `json:"access_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`  // Новый токен доступа
+	RefreshToken string `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."` // Новый токен обновления
+}
+
 // AuthenticateResult представляет результат аутентификации.
 type AuthenticateResult struct {
 	AccessToken  string `json:"access_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`  // Токен доступа
