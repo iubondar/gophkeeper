@@ -240,3 +240,70 @@ func TestAuthMiddleware_ExpiredTokenMessage(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "Authentication token expired")
 	assert.False(t, handlerCalled, "Handler should not have been called")
 }
+
+func TestAuthMiddleware_SpecificJWTErrors(t *testing.T) {
+	tests := []struct {
+		name           string
+		tokenClaims    jwt.RegisteredClaims
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name: "Expired token",
+			tokenClaims: jwt.RegisteredClaims{
+				Subject:   uuid.New().String(),
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
+				IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
+			},
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   `{"message":"Authentication token expired","code":401}` + "\n",
+		},
+		{
+			name: "Future token",
+			tokenClaims: jwt.RegisteredClaims{
+				Subject:   uuid.New().String(),
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
+				NotBefore: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
+				IssuedAt:  jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
+			},
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   `{"message":"Authentication token not valid yet","code":401}` + "\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Создаем токен с указанными claims
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, tt.tokenClaims)
+			tokenString, err := token.SignedString([]byte("supersecretkey"))
+			require.NoError(t, err)
+
+			// Создаем запрос с токеном
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req.AddCookie(&http.Cookie{
+				Name:  auth.AuthCookieName,
+				Value: tokenString,
+			})
+
+			// Создаем тестовый хэндлер
+			handlerCalled := false
+			testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handlerCalled = true
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("success"))
+			})
+
+			// Создаем middleware
+			middleware := AuthMiddleware(testHandler)
+			w := httptest.NewRecorder()
+
+			// Выполняем запрос
+			middleware.ServeHTTP(w, req)
+
+			// Проверяем результат
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			assert.Equal(t, tt.expectedBody, w.Body.String())
+			assert.False(t, handlerCalled, "Handler should not have been called")
+		})
+	}
+}

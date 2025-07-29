@@ -42,11 +42,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				models.EncodeError(w, "Authentication token not valid yet", http.StatusUnauthorized)
 				return
 			}
-			if errors.Is(err, jwt.ErrTokenUsedBeforeIssued) {
-				zap.L().Sugar().Debugln("JWT token used before issued", zap.Error(err))
-				models.EncodeError(w, "Invalid authentication token", http.StatusUnauthorized)
-				return
-			}
 			if errors.Is(err, jwt.ErrTokenMalformed) {
 				zap.L().Sugar().Debugln("JWT token malformed", zap.Error(err))
 				models.EncodeError(w, "Malformed authentication token", http.StatusUnauthorized)
