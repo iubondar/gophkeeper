@@ -33,8 +33,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if err != nil {
 			// Проверяем тип ошибки для более точного сообщения
 			if errors.Is(err, jwt.ErrTokenExpired) {
-				zap.L().Sugar().Debugln("JWT token expired", zap.Error(err))
-				models.EncodeError(w, "Authentication token expired", http.StatusUnauthorized)
+				zap.L().Sugar().Debugln("Access token expired", zap.Error(err))
+				models.EncodeError(w, models.ErrAccessTokenExpired.Error(), http.StatusUnauthorized)
 				return
 			}
 			if errors.Is(err, jwt.ErrTokenNotValidYet) {

@@ -148,7 +148,7 @@ func TestAuthMiddleware_WithExpiredToken(t *testing.T) {
 
 	// Проверяем, что запрос был отклонен из-за истекшего токена
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "Authentication token expired")
+	assert.Contains(t, w.Body.String(), "access token expired")
 	assert.False(t, handlerCalled, "Handler should not have been called")
 }
 
@@ -237,7 +237,7 @@ func TestAuthMiddleware_ExpiredTokenMessage(t *testing.T) {
 
 	// Проверяем, что запрос был отклонен с правильным сообщением
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "Authentication token expired")
+	assert.Contains(t, w.Body.String(), "access token expired")
 	assert.False(t, handlerCalled, "Handler should not have been called")
 }
 
@@ -256,7 +256,7 @@ func TestAuthMiddleware_SpecificJWTErrors(t *testing.T) {
 				IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
 			},
 			expectedStatus: http.StatusUnauthorized,
-			expectedBody:   `{"message":"Authentication token expired","code":401}` + "\n",
+			expectedBody:   `{"message":"access token expired","code":401}` + "\n",
 		},
 		{
 			name: "Future token",

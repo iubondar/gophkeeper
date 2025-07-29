@@ -11,6 +11,7 @@ var (
 	ErrLoginOrPasswordEmpty = errors.New("пустой логин или пароль")
 	ErrUserNotFound         = errors.New("пользователь не найден")
 	ErrUserAlreadyExists    = errors.New("пользователь уже существует")
+	ErrAccessTokenExpired   = errors.New("access token expired")
 )
 
 // JSONError представляет ошибку в формате JSON для API ответов
