@@ -71,6 +71,11 @@ func (c *APIClient) handleAuthenticateResponse(responseBody []byte) error {
 // handleErrorResponse обрабатывает ошибки HTTP ответа и разбирает JSONError
 func (c *APIClient) handleErrorResponse(response *resty.Response) error {
 	if response.StatusCode() >= 400 {
+		// Для 401 ошибки возвращаем специальную ошибку
+		if response.StatusCode() == http.StatusUnauthorized {
+			return models.ErrUnauthorized
+		}
+
 		// Пытаемся разобрать JSONError
 		jsonErr, err := models.ParseJSONError(response.Body())
 		if err == nil {

@@ -133,6 +133,11 @@ func (d *Display) ErrorMsg(err error) {
 	fmt.Printf("Ошибка: %v\n", err)
 }
 
+// AuthError отображает сообщение об ошибке авторизации.
+func (d *Display) AuthError() {
+	fmt.Println("❌ Ошибка авторизации. Необходимо войти в систему заново.")
+}
+
 // SwitchToUserMenuNotice отображает уведомление о переключении в меню пользователя.
 func (d *Display) SwitchToUserMenuNotice() {
 	fmt.Println("Переключение в меню пользователя...")

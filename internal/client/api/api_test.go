@@ -56,7 +56,7 @@ func TestAPIClient_UploadFile(t *testing.T) {
 			filename:       "test.txt",
 			serverResponse: `{"message":"Unauthorized"}`,
 			serverStatus:   http.StatusUnauthorized,
-			expectedError:  "Unauthorized",
+			expectedError:  "unauthorized",
 		},
 	}
 
@@ -132,7 +132,7 @@ func TestAPIClient_DownloadFile(t *testing.T) {
 			label:          "test-file",
 			serverResponse: `{"message":"Unauthorized"}`,
 			serverStatus:   http.StatusUnauthorized,
-			expectedError:  "Unauthorized",
+			expectedError:  "unauthorized",
 		},
 	}
 
@@ -432,7 +432,7 @@ func TestAPIClient_Authenticate(t *testing.T) {
 			},
 			serverResponse: `{"message":"Invalid credentials"}`,
 			serverStatus:   http.StatusUnauthorized,
-			expectedError:  "Invalid credentials",
+			expectedError:  "unauthorized",
 		},
 		{
 			name: "user not found",
@@ -501,7 +501,7 @@ func TestAPIClient_UploadSecret(t *testing.T) {
 			},
 			serverResponse: `{"message":"Unauthorized"}`,
 			serverStatus:   http.StatusUnauthorized,
-			expectedError:  "Unauthorized",
+			expectedError:  "unauthorized",
 		},
 		{
 			name: "conflict",
@@ -581,7 +581,7 @@ func TestAPIClient_GetSecretVersion(t *testing.T) {
 			secretName:     "test-secret",
 			serverResponse: `{"message":"Unauthorized"}`,
 			serverStatus:   http.StatusUnauthorized,
-			expectedError:  "Unauthorized",
+			expectedError:  "unauthorized",
 		},
 	}
 
@@ -734,7 +734,7 @@ func TestAPIClient_GetSecret(t *testing.T) {
 			secretName:     "test-secret",
 			serverResponse: `{"message":"Unauthorized"}`,
 			serverStatus:   http.StatusUnauthorized,
-			expectedError:  "Unauthorized",
+			expectedError:  "unauthorized",
 		},
 	}
 
@@ -792,7 +792,7 @@ func TestAPIClient_DeleteSecret(t *testing.T) {
 			secretName:     "test-secret",
 			serverResponse: `{"message":"Unauthorized"}`,
 			serverStatus:   http.StatusUnauthorized,
-			expectedError:  "Unauthorized",
+			expectedError:  "unauthorized",
 		},
 	}
 
@@ -1241,7 +1241,7 @@ func TestAPIClient_Refresh(t *testing.T) {
 			refreshToken:   "expired-refresh-token",
 			serverResponse: `{"message":"refresh token expired"}`,
 			serverStatus:   http.StatusUnauthorized,
-			expectedError:  "refresh token expired",
+			expectedError:  "unauthorized",
 		},
 	}
 

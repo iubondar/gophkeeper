@@ -14,6 +14,7 @@ var (
 	ErrAccessTokenExpired   = errors.New("access token expired")
 	ErrRefreshTokenExpired  = errors.New("refresh token expired")
 	ErrRefreshTokenInvalid  = errors.New("invalid refresh token")
+	ErrUnauthorized         = errors.New("unauthorized")
 )
 
 // JSONError представляет ошибку в формате JSON для API ответов

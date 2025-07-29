@@ -32,6 +32,7 @@ type Display interface {
 	ServerConnected()
 	InvalidChoice()
 	ErrorMsg(err error)
+	AuthError()
 	SwitchToUserMenuNotice()
 	Goodbye()
 	Logout()

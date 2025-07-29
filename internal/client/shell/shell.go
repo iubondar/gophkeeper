@@ -5,6 +5,7 @@ package shell
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gophkeeper/internal/client/cmd"
 	"gophkeeper/internal/client/display"
@@ -46,6 +47,18 @@ func NewShell(registry CommandRegistry, inputHandler InputHandler, display Displ
 		version:         version,
 		buildTime:       buildTime,
 	}
+}
+
+// isAuthError определяет, является ли ошибка ошибкой авторизации (401).
+// Проверяет на специальную ошибку ErrUnauthorized.
+//
+// Параметры:
+//   - err: ошибка для проверки
+//
+// Возвращает:
+//   - bool: true если это ошибка авторизации
+func isAuthError(err error) bool {
+	return errors.Is(err, models.ErrUnauthorized)
 }
 
 // NewShellWithDefaults создает Shell с дефолтными зависимостями.
@@ -114,7 +127,13 @@ func (s *Shell) Run() error {
 			continue
 		default:
 			if result, err := s.executeCommand(commandName); err != nil {
-				s.display.ErrorMsg(err)
+				// Проверяем, является ли ошибка ошибкой авторизации
+				if isAuthError(err) {
+					s.display.AuthError()
+					s.handleLogoutCommand()
+				} else {
+					s.display.ErrorMsg(err)
+				}
 			} else {
 				s.handleCommandResult(commandName, result)
 				if (commandName == CommandRegister || commandName == CommandLogin) && s.menuManager.GetCurrentState() == MenuStateMain {
@@ -323,7 +342,13 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 	if actionState != nil {
 		actionState.Type = commandName
 		if result, err := s.executeCommand(actionState.Action); err != nil {
-			s.display.ErrorMsg(err)
+			// Проверяем, является ли ошибка ошибкой авторизации
+			if isAuthError(err) {
+				s.display.AuthError()
+				s.handleLogoutCommand()
+			} else {
+				s.display.ErrorMsg(err)
+			}
 		} else {
 			s.handleCommandResult(actionState.Action, result)
 		}
@@ -338,7 +363,13 @@ func (s *Shell) handleDataTypeCommand(commandName string) {
 //   - commandName: имя команды (get или delete)
 func (s *Shell) handleGetDeleteCommand(commandName string) {
 	if result, err := s.executeCommand(commandName); err != nil {
-		s.display.ErrorMsg(err)
+		// Проверяем, является ли ошибка ошибкой авторизации
+		if isAuthError(err) {
+			s.display.AuthError()
+			s.handleLogoutCommand()
+		} else {
+			s.display.ErrorMsg(err)
+		}
 	} else {
 		s.handleCommandResult(commandName, result)
 	}
@@ -348,7 +379,13 @@ func (s *Shell) handleGetDeleteCommand(commandName string) {
 // Получает информацию о версии и отображает ее пользователю.
 func (s *Shell) handleVersionCommand() {
 	if result, err := s.commandRegistry.Execute(context.Background(), CommandVersion, nil); err != nil {
-		s.display.ErrorMsg(err)
+		// Проверяем, является ли ошибка ошибкой авторизации
+		if isAuthError(err) {
+			s.display.AuthError()
+			s.handleLogoutCommand()
+		} else {
+			s.display.ErrorMsg(err)
+		}
 	} else {
 		if versionResult, ok := result.(*cmd.VersionResult); ok {
 			s.display.DisplayVersion(versionResult.Version, versionResult.BuildTime)
@@ -369,8 +406,15 @@ func (s *Shell) handleUpdateCommand() {
 	// Получаем данные секрета через команду show
 	showResult, err := s.commandRegistry.Execute(context.Background(), CommandShow, secretName)
 	if err != nil {
-		s.display.ErrorMsg(fmt.Errorf("ошибка при получении данных секрета: %w", err))
-		return
+		// Проверяем, является ли ошибка ошибкой авторизации
+		if isAuthError(err) {
+			s.display.AuthError()
+			s.handleLogoutCommand()
+			return
+		} else {
+			s.display.ErrorMsg(fmt.Errorf("ошибка при получении данных секрета: %w", err))
+			return
+		}
 	}
 
 	showData, ok := showResult.(*cmd.ShowSecretResult)
@@ -416,7 +460,13 @@ func (s *Shell) handleUpdateCommand() {
 
 	// Выполняем обновление
 	if result, err := s.commandRegistry.Execute(context.Background(), CommandUpdate, updateData); err != nil {
-		s.display.ErrorMsg(err)
+		// Проверяем, является ли ошибка ошибкой авторизации
+		if isAuthError(err) {
+			s.display.AuthError()
+			s.handleLogoutCommand()
+		} else {
+			s.display.ErrorMsg(err)
+		}
 	} else {
 		s.handleCommandResult(CommandUpdate, result)
 	}

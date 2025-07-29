@@ -2,10 +2,12 @@ package shell
 
 import (
 	"errors"
+	"fmt"
 	"gophkeeper/internal/client/cmd"
 	"gophkeeper/internal/models"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
@@ -1358,4 +1360,171 @@ func expectDataTypeMenu(mockDisplay *MockDisplay) {
 	mockDisplay.EXPECT().MenuItem("4", "Файл", "Зашифрованный файл")
 	mockDisplay.EXPECT().MenuItem("5", "Назад", "Вернуться к предыдущему меню")
 	mockDisplay.EXPECT().MenuChoice()
+}
+
+// TestIsAuthError проверяет функцию определения ошибок авторизации
+func TestIsAuthError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "ErrUnauthorized",
+			err:      models.ErrUnauthorized,
+			expected: true,
+		},
+		{
+			name:     "wrapped ErrUnauthorized",
+			err:      fmt.Errorf("wrapped: %w", models.ErrUnauthorized),
+			expected: true,
+		},
+		{
+			name:     "regular error",
+			err:      errors.New("some other error"),
+			expected: false,
+		},
+		{
+			name:     "network error",
+			err:      errors.New("network timeout"),
+			expected: false,
+		},
+		{
+			name:     "authentication required (old format)",
+			err:      errors.New("authentication required"),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isAuthError(tt.err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestShell_IntegrationAuthError проверяет интеграцию обработки ошибок авторизации
+// с реальными сообщениями от API сервера
+func TestShell_IntegrationAuthError(t *testing.T) {
+	// Тестируем ErrUnauthorized
+	t.Run("ErrUnauthorized", func(t *testing.T) {
+		err := models.ErrUnauthorized
+		assert.True(t, isAuthError(err), "ErrUnauthorized должна быть определена как ошибка авторизации")
+	})
+
+	// Тестируем обернутую ErrUnauthorized
+	t.Run("wrapped_ErrUnauthorized", func(t *testing.T) {
+		err := fmt.Errorf("wrapped: %w", models.ErrUnauthorized)
+		assert.True(t, isAuthError(err), "Обернутая ErrUnauthorized должна быть определена как ошибка авторизации")
+	})
+
+	// Тестируем обычные ошибки, которые НЕ должны быть определены как ошибки авторизации
+	regularErrors := []string{
+		"network timeout",
+		"connection refused",
+		"file not found",
+		"permission denied",
+		"invalid input",
+		"server error",
+		"authentication required", // старый формат
+		"unauthorized",            // старый формат
+	}
+
+	for _, errMsg := range regularErrors {
+		t.Run(fmt.Sprintf("regular_error_%s", errMsg), func(t *testing.T) {
+			err := errors.New(errMsg)
+			assert.False(t, isAuthError(err), "Ошибка '%s' НЕ должна быть определена как ошибка авторизации", errMsg)
+		})
+	}
+}
+
+// TestShell_HandleAuthError проверяет обработку ошибок авторизации в shell
+func TestShell_HandleAuthError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRegistry := NewMockCommandRegistry(ctrl)
+	mockInputHandler := NewMockInputHandler(ctrl)
+	mockDisplay := NewMockDisplay(ctrl)
+
+	shell := NewShell(mockRegistry, mockInputHandler, mockDisplay, "1.0.0", "2024-01-01")
+
+	// Тест для handleGetDeleteCommand с ошибкой авторизации
+	t.Run("handleGetDeleteCommand with auth error", func(t *testing.T) {
+		authError := models.ErrUnauthorized
+
+		mockInputHandler.EXPECT().GetSecretName().Return("test-secret", nil)
+		mockRegistry.EXPECT().Execute(gomock.Any(), "get", "test-secret").Return(nil, authError)
+		mockDisplay.EXPECT().AuthError()
+		mockDisplay.EXPECT().Logout()
+
+		shell.handleGetDeleteCommand("get")
+	})
+
+	// Тест для handleDataTypeCommand с ошибкой авторизации
+	t.Run("handleDataTypeCommand with auth error", func(t *testing.T) {
+		authError := models.ErrUnauthorized
+
+		// Настраиваем меню для теста
+		shell.menuManager.SetActionState("upload", "")
+		shell.menuManager.SwitchToState(MenuStateDataType)
+
+		mockInputHandler.EXPECT().GetTextData().Return(&models.TextSecretData{Name: "test", Text: "test"}, nil)
+		mockRegistry.EXPECT().Execute(gomock.Any(), "upload", gomock.Any()).Return(nil, authError)
+		mockDisplay.EXPECT().AuthError()
+		mockDisplay.EXPECT().Logout()
+
+		shell.handleDataTypeCommand("text")
+	})
+
+	// Тест для handleVersionCommand с ошибкой авторизации
+	t.Run("handleVersionCommand with auth error", func(t *testing.T) {
+		authError := models.ErrUnauthorized
+
+		mockRegistry.EXPECT().Execute(gomock.Any(), "version", nil).Return(nil, authError)
+		mockDisplay.EXPECT().AuthError()
+		mockDisplay.EXPECT().Logout()
+
+		shell.handleVersionCommand()
+	})
+
+	// Тест для handleUpdateCommand с ошибкой авторизации при получении данных секрета
+	t.Run("handleUpdateCommand with auth error on show", func(t *testing.T) {
+		authError := models.ErrUnauthorized
+
+		mockInputHandler.EXPECT().GetSecretName().Return("test-secret", nil)
+		mockRegistry.EXPECT().Execute(gomock.Any(), "show", "test-secret").Return(nil, authError)
+		mockDisplay.EXPECT().AuthError()
+		mockDisplay.EXPECT().Logout()
+
+		shell.handleUpdateCommand()
+	})
+
+	// Тест для handleUpdateCommand с ошибкой авторизации при обновлении
+	t.Run("handleUpdateCommand with auth error on update", func(t *testing.T) {
+		authError := models.ErrUnauthorized
+
+		showResult := &cmd.ShowSecretResult{
+			Type:     models.SecretTypeText,
+			Metadata: "test metadata",
+			Version:  1,
+		}
+
+		mockInputHandler.EXPECT().GetSecretName().Return("test-secret", nil)
+		mockRegistry.EXPECT().Execute(gomock.Any(), "show", "test-secret").Return(showResult, nil)
+		mockDisplay.EXPECT().DisplaySecretInfo("test-secret", models.SecretTypeText, "test metadata", 1)
+		mockInputHandler.EXPECT().PromptEnterNewData()
+		mockInputHandler.EXPECT().GetUpdatedTextData("test-secret").Return(&models.TextSecretData{Name: "test", Text: "updated"}, nil)
+		mockRegistry.EXPECT().Execute(gomock.Any(), "update", gomock.Any()).Return(nil, authError)
+		mockDisplay.EXPECT().AuthError()
+		mockDisplay.EXPECT().Logout()
+
+		shell.handleUpdateCommand()
+	})
 }

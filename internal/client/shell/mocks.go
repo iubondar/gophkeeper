@@ -280,6 +280,18 @@ func (m *MockDisplay) EXPECT() *MockDisplayMockRecorder {
 	return m.recorder
 }
 
+// AuthError mocks base method.
+func (m *MockDisplay) AuthError() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AuthError")
+}
+
+// AuthError indicates an expected call of AuthError.
+func (mr *MockDisplayMockRecorder) AuthError() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthError", reflect.TypeOf((*MockDisplay)(nil).AuthError))
+}
+
 // BackNotAllowed mocks base method.
 func (m *MockDisplay) BackNotAllowed() {
 	m.ctrl.T.Helper()
