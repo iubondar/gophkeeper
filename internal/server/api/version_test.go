@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
 
@@ -19,8 +18,6 @@ func TestVersionHandler_GetSecretVersion(t *testing.T) {
 	defer ctrl.Finish()
 
 	testUserID := uuid.New()
-	token, err := auth.GenerateAccessToken(testUserID.String())
-	assert.NoError(t, err)
 
 	tests := []struct {
 		name           string
@@ -49,7 +46,7 @@ func TestVersionHandler_GetSecretVersion(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name:           "Unauthorized - no auth cookie",
+			name:           "Unauthorized - no auth context",
 			method:         http.MethodGet,
 			secretName:     "test-secret",
 			withAuth:       false,
@@ -83,17 +80,11 @@ func TestVersionHandler_GetSecretVersion(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/api/version?name="+tt.secretName, nil)
 
 			if tt.withAuth {
-				req.AddCookie(&http.Cookie{
-					Name:  auth.AuthCookieName,
-					Value: token,
-				})
+				req = setUserIDInContext(req, testUserID)
 			}
 
 			rr := httptest.NewRecorder()
 			handler.GetSecretVersion(rr, req)
-
-			resp := rr.Result()
-			defer resp.Body.Close()
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})

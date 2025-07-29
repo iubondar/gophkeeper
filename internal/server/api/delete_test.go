@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 
 	"github.com/google/uuid"
@@ -35,7 +34,7 @@ func TestDeleteHandler_DeleteSecret(t *testing.T) {
 		}
 		h := NewDeleteHandler(uc)
 		req := httptest.NewRequest(http.MethodDelete, "/api/delete?name="+secretName, nil)
-		addUserIDCookie(req, userID)
+		req = setUserIDInContext(req, userID)
 		w := httptest.NewRecorder()
 		h.DeleteSecret(w, req)
 		resp := w.Result()
@@ -50,7 +49,7 @@ func TestDeleteHandler_DeleteSecret(t *testing.T) {
 		}
 		h := NewDeleteHandler(uc)
 		req := httptest.NewRequest(http.MethodDelete, "/api/delete?name="+secretName, nil)
-		addUserIDCookie(req, userID)
+		req = setUserIDInContext(req, userID)
 		w := httptest.NewRecorder()
 		h.DeleteSecret(w, req)
 		resp := w.Result()
@@ -61,7 +60,7 @@ func TestDeleteHandler_DeleteSecret(t *testing.T) {
 		uc := &mockDeleteSecretUsecase{}
 		h := NewDeleteHandler(uc)
 		req := httptest.NewRequest(http.MethodPost, "/api/delete?name="+secretName, nil)
-		addUserIDCookie(req, userID)
+		req = setUserIDInContext(req, userID)
 		w := httptest.NewRecorder()
 		h.DeleteSecret(w, req)
 		resp := w.Result()
@@ -72,7 +71,7 @@ func TestDeleteHandler_DeleteSecret(t *testing.T) {
 		uc := &mockDeleteSecretUsecase{}
 		h := NewDeleteHandler(uc)
 		req := httptest.NewRequest(http.MethodDelete, "/api/delete", nil)
-		addUserIDCookie(req, userID)
+		req = setUserIDInContext(req, userID)
 		w := httptest.NewRecorder()
 		h.DeleteSecret(w, req)
 		resp := w.Result()
@@ -87,16 +86,5 @@ func TestDeleteHandler_DeleteSecret(t *testing.T) {
 		h.DeleteSecret(w, req)
 		resp := w.Result()
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
-	})
-}
-
-func addUserIDCookie(req *http.Request, userID uuid.UUID) {
-	token, err := auth.GenerateAccessToken(userID.String())
-	if err != nil {
-		panic(err)
-	}
-	req.AddCookie(&http.Cookie{
-		Name:  auth.AuthCookieName,
-		Value: token,
 	})
 }

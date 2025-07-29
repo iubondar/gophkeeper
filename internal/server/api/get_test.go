@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
 
@@ -67,6 +66,19 @@ func TestGetHandler_GetSecret(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   `{"message":"Secret name is required","code":400}`,
 		},
+		{
+			name:       "secret not found",
+			method:     http.MethodGet,
+			secretName: "non-existent-secret",
+			userID:     uuid.New(),
+			setupMock: func(mockUC *mocks.MockGetSecretUsecase) {
+				mockUC.EXPECT().
+					GetSecret(gomock.Any(), "non-existent-secret", gomock.Any()).
+					Return(nil, models.ErrRecordNotFound)
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedBody:   `{"message":"Secret not found","code":404}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -78,7 +90,7 @@ func TestGetHandler_GetSecret(t *testing.T) {
 
 			req := httptest.NewRequest(tt.method, "/api/get?name="+tt.secretName, nil)
 			if tt.userID != uuid.Nil {
-				req = addUserIDToRequest(req, tt.userID)
+				req = setUserIDInContext(req, tt.userID)
 			}
 
 			w := httptest.NewRecorder()
@@ -89,21 +101,4 @@ func TestGetHandler_GetSecret(t *testing.T) {
 			assert.JSONEq(t, tt.expectedBody, w.Body.String())
 		})
 	}
-}
-
-// addUserIDToRequest добавляет userID в контекст запроса для тестирования
-func addUserIDToRequest(req *http.Request, userID uuid.UUID) *http.Request {
-	// Создаем тестовый JWT токен
-	token, err := auth.GenerateAccessToken(userID.String())
-	if err != nil {
-		panic(err)
-	}
-
-	// Добавляем cookie с токеном
-	req.AddCookie(&http.Cookie{
-		Name:  auth.AuthCookieName,
-		Value: token,
-	})
-
-	return req
 }

@@ -8,14 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
 
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -41,13 +39,8 @@ func TestDownloadFileHandler_DownloadFile(t *testing.T) {
 			},
 		}))
 
-		// Добавляем аутентификацию
-		token, err := auth.GenerateAccessToken(userID.String())
-		require.NoError(t, err)
-		req.AddCookie(&http.Cookie{
-			Name:  auth.AuthCookieName,
-			Value: token,
-		})
+		// Добавляем userID в контекст
+		req = setUserIDInContext(req, userID)
 
 		w := httptest.NewRecorder()
 
@@ -94,13 +87,9 @@ func TestDownloadFileHandler_DownloadFile(t *testing.T) {
 			},
 		}))
 
-		// Добавляем аутентификацию
-		token, err := auth.GenerateAccessToken(userID.String())
-		require.NoError(t, err)
-		req.AddCookie(&http.Cookie{
-			Name:  auth.AuthCookieName,
-			Value: token,
-		})
+		// Добавляем userID в контекст
+		req = setUserIDInContext(req, userID)
+
 		w := httptest.NewRecorder()
 
 		handler.DownloadFile(w, req)
@@ -110,7 +99,6 @@ func TestDownloadFileHandler_DownloadFile(t *testing.T) {
 
 	t.Run("usecase not found error", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/files/"+label+"/download", nil)
-		// Устанавливаем URL параметр для chi router
 		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, &chi.Context{
 			URLParams: chi.RouteParams{
 				Keys:   []string{"label"},
@@ -118,13 +106,9 @@ func TestDownloadFileHandler_DownloadFile(t *testing.T) {
 			},
 		}))
 
-		// Добавляем аутентификацию
-		token, err := auth.GenerateAccessToken(userID.String())
-		require.NoError(t, err)
-		req.AddCookie(&http.Cookie{
-			Name:  auth.AuthCookieName,
-			Value: token,
-		})
+		// Добавляем userID в контекст
+		req = setUserIDInContext(req, userID)
+
 		w := httptest.NewRecorder()
 
 		mockUsecase.EXPECT().
@@ -138,7 +122,6 @@ func TestDownloadFileHandler_DownloadFile(t *testing.T) {
 
 	t.Run("usecase error", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/files/"+label+"/download", nil)
-		// Устанавливаем URL параметр для chi router
 		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, &chi.Context{
 			URLParams: chi.RouteParams{
 				Keys:   []string{"label"},
@@ -146,13 +129,9 @@ func TestDownloadFileHandler_DownloadFile(t *testing.T) {
 			},
 		}))
 
-		// Добавляем аутентификацию
-		token, err := auth.GenerateAccessToken(userID.String())
-		require.NoError(t, err)
-		req.AddCookie(&http.Cookie{
-			Name:  auth.AuthCookieName,
-			Value: token,
-		})
+		// Добавляем userID в контекст
+		req = setUserIDInContext(req, userID)
+
 		w := httptest.NewRecorder()
 
 		mockUsecase.EXPECT().

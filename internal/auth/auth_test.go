@@ -116,3 +116,52 @@ func TestGetUserID(t *testing.T) {
 	_, err = getUserID(expiredTokenString)
 	assert.Error(t, err)
 }
+
+func TestGetUserID_ExpiredToken(t *testing.T) {
+	// Создаем токен с истекшим временем
+	userID := uuid.New().String()
+
+	claims := jwt.RegisteredClaims{
+		Subject:   userID,
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)), // Токен истек час назад
+		IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(secretKey))
+	require.NoError(t, err)
+
+	// Пытаемся получить userID из истекшего токена
+	result, err := getUserID(tokenString)
+
+	// Должны получить ошибку и uuid.Nil
+	assert.Error(t, err)
+	assert.Equal(t, uuid.Nil, result)
+}
+
+func TestGetUserID_ValidToken(t *testing.T) {
+	// Создаем валидный токен
+	userID := uuid.New().String()
+
+	claims := jwt.RegisteredClaims{
+		Subject:   userID,
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)), // Токен действителен час
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(secretKey))
+	require.NoError(t, err)
+
+	// Пытаемся получить userID из валидного токена
+	result, err := getUserID(tokenString)
+
+	// Должны получить userID без ошибки
+	assert.NoError(t, err)
+	assert.NotEqual(t, uuid.Nil, result)
+
+	// Проверяем, что полученный userID соответствует ожидаемому
+	expectedUserID, err := uuid.Parse(userID)
+	require.NoError(t, err)
+	assert.Equal(t, expectedUserID, result)
+}

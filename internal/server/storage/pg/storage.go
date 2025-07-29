@@ -110,9 +110,10 @@ func (s *Storage) GetRecordByLabel(ctx context.Context, label string, userID uui
 	var record models.GetSecretOut
 	var id uuid.UUID
 	var createdAt, updatedAt sql.NullTime
+	var fileName sql.NullString
 
 	err := s.db.QueryRowContext(ctx, queries.GetRecordByLabel, label, userID).Scan(
-		&id, &record.Label, &record.Type, &record.Metadata, &record.EncryptedData, &record.FileKey, &record.FileName, &record.Version, &createdAt, &updatedAt,
+		&id, &record.Label, &record.Type, &record.Metadata, &record.EncryptedData, &record.FileKey, &fileName, &record.Version, &createdAt, &updatedAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -123,6 +124,14 @@ func (s *Storage) GetRecordByLabel(ctx context.Context, label string, userID uui
 	}
 
 	record.ID = id.String()
+
+	// Обрабатываем NULL значение для file_name
+	if fileName.Valid {
+		record.FileName = fileName.String
+	} else {
+		record.FileName = ""
+	}
+
 	return &record, nil
 }
 

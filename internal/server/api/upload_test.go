@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
 
@@ -19,10 +18,8 @@ func TestUploadHandler_Upload(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Создаем тестовый userID и токен
+	// Создаем тестовый userID
 	testUserID := uuid.New()
-	token, err := auth.GenerateAccessToken(testUserID.String())
-	assert.NoError(t, err)
 
 	tests := []struct {
 		name           string
@@ -51,7 +48,7 @@ func TestUploadHandler_Upload(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name:           "Unauthorized - no auth cookie",
+			name:           "Unauthorized - no auth context",
 			method:         http.MethodPost,
 			body:           mustMarshal(t, models.UploadSecretIn{Label: "test", Type: "note"}),
 			withAuth:       false,
@@ -74,7 +71,7 @@ func TestUploadHandler_Upload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUc := mocks.NewMockUploadSecretUsecase(ctrl)
-			if tt.method == http.MethodPost && tt.withAuth && tt.name != "Invalid JSON" && tt.name != "Unauthorized - no auth cookie" {
+			if tt.method == http.MethodPost && tt.withAuth && tt.name != "Invalid JSON" && tt.name != "Unauthorized - no auth context" {
 				mockUc.EXPECT().
 					UploadSecret(gomock.Any(), gomock.Any(), testUserID).
 					Return(tt.ucResult, tt.ucError)
@@ -89,19 +86,13 @@ func TestUploadHandler_Upload(t *testing.T) {
 				req = httptest.NewRequest(tt.method, "/api/upload", nil)
 			}
 
-			// Добавляем аутентификацию если нужно
+			// Добавляем userID в контекст если нужно
 			if tt.withAuth {
-				req.AddCookie(&http.Cookie{
-					Name:  auth.AuthCookieName,
-					Value: token,
-				})
+				req = setUserIDInContext(req, testUserID)
 			}
 
 			rr := httptest.NewRecorder()
 			handler.Upload(rr, req)
-
-			resp := rr.Result()
-			defer resp.Body.Close()
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})

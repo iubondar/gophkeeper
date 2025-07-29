@@ -5,6 +5,7 @@ package router
 import (
 	"gophkeeper/internal/server/api"
 	"gophkeeper/internal/server/compress"
+	"gophkeeper/internal/server/middleware"
 	"gophkeeper/internal/server/storage/file"
 	"gophkeeper/internal/server/storage/pg"
 	"gophkeeper/internal/server/templates"
@@ -60,19 +61,26 @@ func NewRouter(storage *pg.Storage, fileStorage file.FileStorage) (chi.Router, e
 
 	// API маршруты
 	router.Route("/api", func(r chi.Router) {
+		// Публичные маршруты (не требуют аутентификации)
 		r.Post("/register", registerHandler.Register)
 		r.Post("/login", loginHandler.Login)
 		r.Post("/authenticate", authenticateHandler.Authenticate)
 		r.Post("/refresh", handleRefresh)
-		r.Post("/upload", uploadHandler.Upload)
-		r.Get("/get", getHandler.GetSecret)
-		r.Delete("/delete", deleteHandler.DeleteSecret)
-		r.Put("/update", updateHandler.Update)
-		r.Get("/version", versionHandler.GetSecretVersion)
 
-		// File routes
-		r.Post("/files", uploadFileHandler.UploadFile)
-		r.Get("/files/{label}/download", downloadFileHandler.DownloadFile)
+		// Защищенные маршруты (требуют аутентификации)
+		r.Route("/", func(r chi.Router) {
+			r.Use(middleware.AuthMiddleware)
+
+			r.Post("/upload", uploadHandler.Upload)
+			r.Get("/get", getHandler.GetSecret)
+			r.Delete("/delete", deleteHandler.DeleteSecret)
+			r.Put("/update", updateHandler.Update)
+			r.Get("/version", versionHandler.GetSecretVersion)
+
+			// File routes
+			r.Post("/files", uploadFileHandler.UploadFile)
+			r.Get("/files/{label}/download", downloadFileHandler.DownloadFile)
+		})
 	})
 
 	return router, nil

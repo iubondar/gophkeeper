@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
+	"gophkeeper/internal/server/middleware"
 
 	"github.com/go-chi/chi"
 	"github.com/google/uuid"
@@ -55,10 +55,11 @@ func (h *DownloadFileHandler) DownloadFile(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userID, err := auth.GetUserIDFromReq(r)
-	if err != nil {
-		zap.L().Sugar().Debugln("Failed to get user ID", zap.Error(err))
-		models.EncodeError(w, "Failed to get user ID", http.StatusUnauthorized)
+	// Получаем userID из контекста (установлен middleware)
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		zap.L().Sugar().Debugln("User ID not found in context")
+		models.EncodeError(w, "Authentication required", http.StatusUnauthorized)
 		return
 	}
 

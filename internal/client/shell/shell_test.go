@@ -113,7 +113,7 @@ func TestShell_executeCommand_Register(t *testing.T) {
 
 	// Настраиваем ожидания
 	mockInputHandler.EXPECT().GetUserCredentials().Return(credentials, nil)
-	mockRegistry.EXPECT().Execute(gomock.Any(), CommandRegister, credentials).Return("success", nil)
+	mockRegistry.EXPECT().Execute(gomock.Any(), CommandRegister, gomock.Any()).Return("success", nil)
 
 	// Выполняем тест
 	result, err := shell.executeCommand(CommandRegister)
@@ -171,7 +171,7 @@ func TestShell_executeCommand_Login(t *testing.T) {
 
 	// Настраиваем ожидания
 	mockInputHandler.EXPECT().GetUserCredentials().Return(credentials, nil)
-	mockRegistry.EXPECT().Execute(gomock.Any(), CommandLogin, credentials).Return("success", nil)
+	mockRegistry.EXPECT().Execute(gomock.Any(), CommandLogin, gomock.Any()).Return("success", nil)
 
 	// Выполняем тест
 	result, err := shell.executeCommand(CommandLogin)

@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
+	"gophkeeper/internal/server/middleware"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -57,15 +57,16 @@ func (h *UploadFileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := auth.GetUserIDFromReq(r)
-	if err != nil {
-		zap.L().Sugar().Debugln("Failed to get user ID", zap.Error(err))
-		models.EncodeError(w, "Failed to get user ID", http.StatusUnauthorized)
+	// Получаем userID из контекста (установлен middleware)
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		zap.L().Sugar().Debugln("User ID not found in context")
+		models.EncodeError(w, "Authentication required", http.StatusUnauthorized)
 		return
 	}
 
 	// Парсим multipart форму
-	err = r.ParseMultipartForm(32 << 20) // 32MB max
+	err := r.ParseMultipartForm(32 << 20) // 32MB max
 	if err != nil {
 		models.EncodeError(w, "Failed to parse form", http.StatusBadRequest)
 		return

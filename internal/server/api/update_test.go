@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
 
@@ -20,8 +19,6 @@ func TestUpdateHandler_Update(t *testing.T) {
 	defer ctrl.Finish()
 
 	testUserID := uuid.New()
-	token, err := auth.GenerateAccessToken(testUserID.String())
-	assert.NoError(t, err)
 
 	tests := []struct {
 		name           string
@@ -50,7 +47,7 @@ func TestUpdateHandler_Update(t *testing.T) {
 			expectedStatus: http.StatusConflict,
 		},
 		{
-			name:           "Unauthorized - no auth cookie",
+			name:           "Unauthorized - no auth context",
 			method:         http.MethodPut,
 			body:           mustMarshal(t, models.UpdateSecretIn{UploadSecretIn: models.UploadSecretIn{Label: "test", Type: "note"}, Version: 1}),
 			withAuth:       false,
@@ -73,7 +70,7 @@ func TestUpdateHandler_Update(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUc := mocks.NewMockUpdateSecretUsecase(ctrl)
-			if tt.method == http.MethodPut && tt.withAuth && tt.name != "Invalid JSON" && tt.name != "Unauthorized - no auth cookie" {
+			if tt.method == http.MethodPut && tt.withAuth && tt.name != "Invalid JSON" && tt.name != "Unauthorized - no auth context" {
 				mockUc.EXPECT().
 					UpdateSecret(gomock.Any(), gomock.Any(), testUserID).
 					Return(tt.ucResult, tt.ucError)
@@ -89,17 +86,11 @@ func TestUpdateHandler_Update(t *testing.T) {
 			}
 
 			if tt.withAuth {
-				req.AddCookie(&http.Cookie{
-					Name:  auth.AuthCookieName,
-					Value: token,
-				})
+				req = setUserIDInContext(req, testUserID)
 			}
 
 			rr := httptest.NewRecorder()
 			handler.Update(rr, req)
-
-			resp := rr.Result()
-			defer resp.Body.Close()
 
 			assert.Equal(t, tt.expectedStatus, rr.Code)
 		})

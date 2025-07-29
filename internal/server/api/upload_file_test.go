@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
 	"gophkeeper/internal/server/storage/mocks"
 
@@ -49,13 +48,8 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/files", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
-		// Добавляем аутентификацию
-		token, err := auth.GenerateAccessToken(userID.String())
-		require.NoError(t, err)
-		req.AddCookie(&http.Cookie{
-			Name:  auth.AuthCookieName,
-			Value: token,
-		})
+		// Добавляем userID в контекст
+		req = setUserIDInContext(req, userID)
 
 		w := httptest.NewRecorder()
 
@@ -103,6 +97,8 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/api/files", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
+		// Не добавляем userID в контекст
+
 		w := httptest.NewRecorder()
 
 		handler.UploadFile(w, req)
@@ -121,13 +117,8 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/api/files", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
-		// Добавляем аутентификацию
-		token, err := auth.GenerateAccessToken(userID.String())
-		require.NoError(t, err)
-		req.AddCookie(&http.Cookie{
-			Name:  auth.AuthCookieName,
-			Value: token,
-		})
+		req = setUserIDInContext(req, userID)
+
 		w := httptest.NewRecorder()
 
 		handler.UploadFile(w, req)
@@ -144,13 +135,8 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/api/files", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
-		// Добавляем аутентификацию
-		token, err := auth.GenerateAccessToken(userID.String())
-		require.NoError(t, err)
-		req.AddCookie(&http.Cookie{
-			Name:  auth.AuthCookieName,
-			Value: token,
-		})
+		req = setUserIDInContext(req, userID)
+
 		w := httptest.NewRecorder()
 
 		handler.UploadFile(w, req)
@@ -170,13 +156,8 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/api/files", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
-		// Добавляем аутентификацию
-		token, err := auth.GenerateAccessToken(userID.String())
-		require.NoError(t, err)
-		req.AddCookie(&http.Cookie{
-			Name:  auth.AuthCookieName,
-			Value: token,
-		})
+		req = setUserIDInContext(req, userID)
+
 		w := httptest.NewRecorder()
 
 		mockUsecase.EXPECT().
@@ -200,13 +181,8 @@ func TestUploadFileHandler_UploadFile(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/api/files", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
-		// Добавляем аутентификацию
-		token, err := auth.GenerateAccessToken(userID.String())
-		require.NoError(t, err)
-		req.AddCookie(&http.Cookie{
-			Name:  auth.AuthCookieName,
-			Value: token,
-		})
+		req = setUserIDInContext(req, userID)
+
 		w := httptest.NewRecorder()
 
 		mockUsecase.EXPECT().

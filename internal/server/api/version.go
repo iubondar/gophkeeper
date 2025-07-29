@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gophkeeper/internal/auth"
 	"gophkeeper/internal/models"
+	"gophkeeper/internal/server/middleware"
 	"gophkeeper/internal/server/usecase"
 
 	"go.uber.org/zap"
@@ -46,10 +46,11 @@ func (handler VersionHandler) GetSecretVersion(res http.ResponseWriter, req *htt
 		return
 	}
 
-	userID, err := auth.GetUserIDFromReq(req)
-	if err != nil {
-		zap.L().Sugar().Debugln("Failed to get user ID", zap.Error(err))
-		models.EncodeError(res, "Failed to get user ID", http.StatusUnauthorized)
+	// Получаем userID из контекста (установлен middleware)
+	userID, ok := middleware.GetUserIDFromContext(req.Context())
+	if !ok {
+		zap.L().Sugar().Debugln("User ID not found in context")
+		models.EncodeError(res, "Authentication required", http.StatusUnauthorized)
 		return
 	}
 

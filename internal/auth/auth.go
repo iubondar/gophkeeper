@@ -93,6 +93,7 @@ func getUserID(tokenString string) (userID uuid.UUID, err error) {
 		return uuid.Nil, err
 	}
 
+	// Проверяем валидность токена (включая expiration)
 	if !token.Valid {
 		return uuid.Nil, fmt.Errorf("token is not valid")
 	}
