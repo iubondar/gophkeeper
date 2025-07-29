@@ -246,7 +246,7 @@ func TestJWTDetailedBehavior(t *testing.T) {
 	require.NoError(t, err)
 
 	// Парсим истекший токен - JWT библиотека возвращает ошибку
-	parsedToken, err = jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{},
+	_, err = jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{},
 		func(t *jwt.Token) (any, error) {
 			return []byte(secretKey), nil
 		})
@@ -275,14 +275,14 @@ func TestTokenValidCheck(t *testing.T) {
 
 	// Создаем токен с RSA алгоритмом, но подписываем HMAC ключом
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	tokenString, err := token.SignedString([]byte(secretKey)) // Это вызовет ошибку
-	require.Error(t, err)                                     // Ожидаем ошибку, так как RSA токен нельзя подписать HMAC ключом
+	_, err := token.SignedString([]byte(secretKey)) // Это вызовет ошибку
+	require.Error(t, err)                           // Ожидаем ошибку, так как RSA токен нельзя подписать HMAC ключом
 
 	// Но если бы мы получили такой токен каким-то образом,
 	// то без проверки token.Valid мы могли бы его принять
 	// Давайте создадим валидный токен и изменим его алгоритм
 	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err = token.SignedString([]byte(secretKey))
+	tokenString, err := token.SignedString([]byte(secretKey))
 	require.NoError(t, err)
 
 	// Теперь изменим алгоритм в заголовке токена (это демонстрирует проблему)
@@ -356,7 +356,7 @@ func TestTokenValidCheckWithValidToken(t *testing.T) {
 	require.NoError(t, err)
 
 	// Пытаемся парсить с правильным ключом
-	parsedToken, err = jwt.ParseWithClaims(wrongTokenString, &jwt.RegisteredClaims{},
+	_, err = jwt.ParseWithClaims(wrongTokenString, &jwt.RegisteredClaims{},
 		func(t *jwt.Token) (any, error) {
 			return []byte(secretKey), nil
 		})
