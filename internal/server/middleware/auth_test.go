@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -304,6 +305,66 @@ func TestAuthMiddleware_SpecificJWTErrors(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			assert.Equal(t, tt.expectedBody, w.Body.String())
 			assert.False(t, handlerCalled, "Handler should not have been called")
+		})
+	}
+}
+
+func TestGetUserIDFromContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		setupCtx func() context.Context
+		want     uuid.UUID
+		wantOk   bool
+	}{
+		{
+			name: "UserID exists in context",
+			setupCtx: func() context.Context {
+				userID := uuid.New()
+				return context.WithValue(context.Background(), UserIDKey{}, userID)
+			},
+			want:   uuid.New(), // Будет заменено в тесте
+			wantOk: true,
+		},
+		{
+			name: "UserID not in context",
+			setupCtx: func() context.Context {
+				return context.Background()
+			},
+			want:   uuid.Nil,
+			wantOk: false,
+		},
+		{
+			name: "Wrong type in context",
+			setupCtx: func() context.Context {
+				return context.WithValue(context.Background(), UserIDKey{}, "not-a-uuid")
+			},
+			want:   uuid.Nil,
+			wantOk: false,
+		},
+		{
+			name: "Nil value in context",
+			setupCtx: func() context.Context {
+				return context.WithValue(context.Background(), UserIDKey{}, nil)
+			},
+			want:   uuid.Nil,
+			wantOk: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := tt.setupCtx()
+			got, ok := GetUserIDFromContext(ctx)
+
+			if tt.wantOk {
+				// Если ожидаем успех, проверяем что получили не пустой UUID
+				assert.NotEqual(t, uuid.Nil, got)
+				assert.True(t, ok)
+			} else {
+				// Если ожидаем неудачу, проверяем что получили пустой UUID
+				assert.Equal(t, uuid.Nil, got)
+				assert.False(t, ok)
+			}
 		})
 	}
 }
