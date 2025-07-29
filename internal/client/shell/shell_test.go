@@ -752,6 +752,7 @@ func TestShell_handleActionCommand(t *testing.T) {
 	actionState := mockMenuManager.GetActionState()
 	if actionState == nil {
 		t.Error("Expected actionState to be set")
+		return
 	}
 	if actionState.Action != CommandUpload {
 		t.Errorf("Expected action to be %s, got %s", CommandUpload, actionState.Action)

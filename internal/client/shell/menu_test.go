@@ -202,6 +202,7 @@ func TestMenuManager_GetActionState(t *testing.T) {
 	actionState := manager.GetActionState()
 	if actionState == nil {
 		t.Error("Expected GetActionState to return non-nil after setting")
+		return
 	}
 	if actionState.Action != "upload" {
 		t.Errorf("Expected action to be 'upload', got %s", actionState.Action)
