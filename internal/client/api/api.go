@@ -84,6 +84,72 @@ func (c *APIClient) handleErrorResponse(response *resty.Response) error {
 	return nil
 }
 
+// Refresh обновляет токены доступа используя refresh token.
+// После успешного обновления сохраняет новые токены в клиенте.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
+func (c *APIClient) Refresh(ctx context.Context) error {
+	if c.refreshToken == "" {
+		return errors.New("refresh token is required")
+	}
+
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		SetBody(models.RefreshIn{RefreshToken: c.refreshToken}).
+		Post("/api/refresh")
+
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return c.handleAuthenticateResponse(response.Body())
+}
+
+// executeWithTokenRefresh выполняет HTTP запрос с автоматическим обновлением токенов при ошибке 401.
+// Если запрос возвращает 401 (ErrAccessTokenExpired), автоматически обновляет токены и повторяет запрос.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - requestFn: функция для выполнения HTTP запроса
+//
+// Возвращает:
+//   - *resty.Response: ответ сервера
+//   - error: ошибка в случае неудачи
+func (c *APIClient) executeWithTokenRefresh(ctx context.Context, requestFn func() (*resty.Response, error)) (*resty.Response, error) {
+	// Первая попытка
+	response, err := requestFn()
+	if err != nil {
+		return nil, err
+	}
+
+	// Проверяем на ошибку 401
+	if response.StatusCode() == http.StatusUnauthorized {
+		jsonErr, parseErr := models.ParseJSONError(response.Body())
+		if parseErr == nil && jsonErr.Message == models.ErrAccessTokenExpired.Error() {
+			// Пытаемся обновить токены
+			if refreshErr := c.Refresh(ctx); refreshErr != nil {
+				return nil, fmt.Errorf("failed to refresh tokens: %w", refreshErr)
+			}
+
+			// Повторяем запрос с новыми токенами
+			response, err = requestFn()
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return response, nil
+}
+
 // setAuthCookie устанавливает cookie аутентификации для запроса
 func (c *APIClient) setAuthCookie(request *resty.Request) error {
 	if c.accessToken == "" {
@@ -182,6 +248,7 @@ func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) 
 
 // UploadSecret загружает секрет на сервер.
 // Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
 //
 // Параметры:
 //   - ctx: контекст запроса
@@ -190,15 +257,19 @@ func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) 
 // Возвращает:
 //   - error: ошибка в случае неудачи
 func (c *APIClient) UploadSecret(ctx context.Context, in models.UploadSecretIn) error {
-	request := c.httpc.R().
-		SetContext(ctx).
-		SetBody(in)
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetBody(in)
 
-	if err := c.setAuthCookie(request); err != nil {
-		return err
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Post("/api/upload")
 	}
 
-	response, err := request.Post("/api/upload")
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
 	if err != nil {
 		return err
 	}
@@ -212,6 +283,7 @@ func (c *APIClient) UploadSecret(ctx context.Context, in models.UploadSecretIn) 
 
 // GetSecretVersion получает текущую версию секрета с сервера.
 // Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
 //
 // Параметры:
 //   - ctx: контекст запроса
@@ -221,15 +293,19 @@ func (c *APIClient) UploadSecret(ctx context.Context, in models.UploadSecretIn) 
 //   - int: версия секрета
 //   - error: ошибка в случае неудачи
 func (c *APIClient) GetSecretVersion(ctx context.Context, secretName string) (int, error) {
-	request := c.httpc.R().
-		SetContext(ctx).
-		SetQueryParam("name", secretName)
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetQueryParam("name", secretName)
 
-	if err := c.setAuthCookie(request); err != nil {
-		return 0, err
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Get("/api/version")
 	}
 
-	response, err := request.Get("/api/version")
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
 	if err != nil {
 		return 0, err
 	}
@@ -251,6 +327,7 @@ func (c *APIClient) GetSecretVersion(ctx context.Context, secretName string) (in
 
 // UpdateSecret обновляет существующий секрет на сервере.
 // Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
 //
 // Параметры:
 //   - ctx: контекст запроса
@@ -259,16 +336,19 @@ func (c *APIClient) GetSecretVersion(ctx context.Context, secretName string) (in
 // Возвращает:
 //   - error: ошибка в случае неудачи
 func (c *APIClient) UpdateSecret(ctx context.Context, in models.UpdateSecretIn) error {
-	// Выполняем обновление
-	request := c.httpc.R().
-		SetContext(ctx).
-		SetBody(in)
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetBody(in)
 
-	if err := c.setAuthCookie(request); err != nil {
-		return err
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Put("/api/update")
 	}
 
-	response, err := request.Put("/api/update")
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
 	if err != nil {
 		return err
 	}
@@ -282,6 +362,7 @@ func (c *APIClient) UpdateSecret(ctx context.Context, in models.UpdateSecretIn) 
 
 // GetSecret получает секрет с сервера.
 // Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
 //
 // Параметры:
 //   - ctx: контекст запроса
@@ -291,15 +372,19 @@ func (c *APIClient) UpdateSecret(ctx context.Context, in models.UpdateSecretIn) 
 //   - *models.GetSecretOut: данные секрета
 //   - error: ошибка в случае неудачи
 func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error) {
-	request := c.httpc.R().
-		SetContext(ctx).
-		SetQueryParam("name", secretName)
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetQueryParam("name", secretName)
 
-	if err := c.setAuthCookie(request); err != nil {
-		return nil, err
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Get("/api/get")
 	}
 
-	response, err := request.Get("/api/get")
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
 	if err != nil {
 		return nil, err
 	}
@@ -319,6 +404,7 @@ func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.G
 
 // DeleteSecret удаляет секрет с сервера.
 // Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
 //
 // Параметры:
 //   - ctx: контекст запроса
@@ -327,15 +413,19 @@ func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.G
 // Возвращает:
 //   - error: ошибка в случае неудачи
 func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
-	request := c.httpc.R().
-		SetContext(ctx).
-		SetQueryParam("name", secretName)
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetQueryParam("name", secretName)
 
-	if err := c.setAuthCookie(request); err != nil {
-		return err
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Delete("/api/delete")
 	}
 
-	response, err := request.Delete("/api/delete")
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
 	if err != nil {
 		return err
 	}
@@ -349,6 +439,7 @@ func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
 
 // UploadFile загружает зашифрованный файл на сервер.
 // Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
 //
 // Параметры:
 //   - ctx: контекст запроса
@@ -361,19 +452,23 @@ func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
 //   - *models.UploadSecretOut: результат загрузки
 //   - error: ошибка в случае неудачи
 func (c *APIClient) UploadFile(ctx context.Context, label, metadata string, file io.Reader, filename string) (*models.UploadSecretOut, error) {
-	request := c.httpc.R().
-		SetContext(ctx).
-		SetFileReader("file", filename, file).
-		SetFormData(map[string]string{
-			"label":    label,
-			"metadata": metadata,
-		})
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetFileReader("file", filename, file).
+			SetFormData(map[string]string{
+				"label":    label,
+				"metadata": metadata,
+			})
 
-	if err := c.setAuthCookie(request); err != nil {
-		return nil, err
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Post("/api/files")
 	}
 
-	response, err := request.Post("/api/files")
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
 	if err != nil {
 		return nil, err
 	}
@@ -393,6 +488,7 @@ func (c *APIClient) UploadFile(ctx context.Context, label, metadata string, file
 
 // DownloadFile скачивает зашифрованный файл с сервера.
 // Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
 //
 // Параметры:
 //   - ctx: контекст запроса
@@ -402,15 +498,19 @@ func (c *APIClient) UploadFile(ctx context.Context, label, metadata string, file
 //   - io.ReadCloser: поток для чтения файла
 //   - error: ошибка в случае неудачи
 func (c *APIClient) DownloadFile(ctx context.Context, label string) (io.ReadCloser, error) {
-	request := c.httpc.R().
-		SetContext(ctx).
-		SetQueryParam("label", label)
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetQueryParam("label", label)
 
-	if err := c.setAuthCookie(request); err != nil {
-		return nil, err
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Get(fmt.Sprintf("/api/files/%s/download", label))
 	}
 
-	response, err := request.Get(fmt.Sprintf("/api/files/%s/download", label))
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
 	if err != nil {
 		return nil, err
 	}

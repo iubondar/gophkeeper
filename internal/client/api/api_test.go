@@ -1214,3 +1214,301 @@ func TestAPIClient_UploadFile_InvalidJSONResponse(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to unmarshal upload file response")
 	assert.Nil(t, result)
 }
+
+func TestAPIClient_Refresh(t *testing.T) {
+	tests := []struct {
+		name           string
+		refreshToken   string
+		serverResponse string
+		serverStatus   int
+		expectedError  string
+	}{
+		{
+			name:           "successful refresh",
+			refreshToken:   "valid-refresh-token",
+			serverResponse: `{"access_token":"new-access-token","refresh_token":"new-refresh-token"}`,
+			serverStatus:   http.StatusOK,
+		},
+		{
+			name:           "invalid refresh token",
+			refreshToken:   "invalid-refresh-token",
+			serverResponse: `{"message":"invalid refresh token"}`,
+			serverStatus:   http.StatusBadRequest,
+			expectedError:  "invalid refresh token",
+		},
+		{
+			name:           "expired refresh token",
+			refreshToken:   "expired-refresh-token",
+			serverResponse: `{"message":"refresh token expired"}`,
+			serverStatus:   http.StatusUnauthorized,
+			expectedError:  "refresh token expired",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/api/refresh", r.URL.Path)
+				assert.Equal(t, http.MethodPost, r.Method)
+
+				w.WriteHeader(tt.serverStatus)
+				w.Write([]byte(tt.serverResponse))
+			}))
+			defer server.Close()
+
+			client := NewAPIClient(server.URL)
+			client.refreshToken = tt.refreshToken
+
+			err := client.Refresh(context.Background())
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, "new-access-token", client.accessToken)
+				assert.Equal(t, "new-refresh-token", client.refreshToken)
+			}
+		})
+	}
+}
+
+func TestAPIClient_Refresh_NoRefreshToken(t *testing.T) {
+	client := NewAPIClient("http://localhost:8080")
+
+	err := client.Refresh(context.Background())
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "refresh token is required")
+}
+
+func TestAPIClient_Refresh_NetworkError(t *testing.T) {
+	client := NewAPIClient("http://invalid-server:9999")
+	client.refreshToken = "test-token"
+
+	err := client.Refresh(context.Background())
+
+	assert.Error(t, err)
+}
+
+func TestAPIClient_UploadSecret_TokenRefresh(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+
+		if r.URL.Path == "/api/refresh" {
+			// Первый вызов refresh - успешный
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"access_token":"new-access-token","refresh_token":"new-refresh-token"}`))
+			return
+		}
+
+		if r.URL.Path == "/api/upload" {
+			if callCount == 1 {
+				// Первый вызов upload - 401 с expired token
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"message":"access token expired"}`))
+			} else {
+				// Второй вызов upload - успешный
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"message":"success"}`))
+			}
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client := NewAPIClient(server.URL)
+	client.accessToken = "old-access-token"
+	client.refreshToken = "old-refresh-token"
+
+	err := client.UploadSecret(context.Background(), models.UploadSecretIn{
+		Label:         "test-secret",
+		Type:          "text",
+		Metadata:      "test metadata",
+		EncryptedData: []byte("test-data"),
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, "new-access-token", client.accessToken)
+	assert.Equal(t, "new-refresh-token", client.refreshToken)
+	assert.Equal(t, 3, callCount) // 1 upload + 1 refresh + 1 upload
+}
+
+func TestAPIClient_UploadSecret_TokenRefreshFailed(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+
+		if r.URL.Path == "/api/refresh" {
+			// Refresh неуспешен
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"message":"refresh token expired"}`))
+			return
+		}
+
+		if r.URL.Path == "/api/upload" {
+			// Первый вызов upload - 401 с expired token
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"message":"access token expired"}`))
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client := NewAPIClient(server.URL)
+	client.accessToken = "old-access-token"
+	client.refreshToken = "old-refresh-token"
+
+	err := client.UploadSecret(context.Background(), models.UploadSecretIn{
+		Label:         "test-secret",
+		Type:          "text",
+		Metadata:      "test metadata",
+		EncryptedData: []byte("test-data"),
+	})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to refresh tokens")
+	assert.Equal(t, 2, callCount) // 1 upload + 1 refresh
+}
+
+func TestAPIClient_GetSecret_TokenRefresh(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+
+		if r.URL.Path == "/api/refresh" {
+			// Первый вызов refresh - успешный
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"access_token":"new-access-token","refresh_token":"new-refresh-token"}`))
+			return
+		}
+
+		if r.URL.Path == "/api/get" {
+			if callCount == 1 {
+				// Первый вызов get - 401 с expired token
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"message":"access token expired"}`))
+			} else {
+				// Второй вызов get - успешный
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"id":"secret-123","label":"test-secret","type":"text","metadata":"test metadata","encrypted_data":"dGVzdC1kYXRh","version":1}`))
+			}
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client := NewAPIClient(server.URL)
+	client.accessToken = "old-access-token"
+	client.refreshToken = "old-refresh-token"
+
+	result, err := client.GetSecret(context.Background(), "test-secret")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "test-secret", result.Label)
+	assert.Equal(t, []byte("test-data"), result.EncryptedData)
+	assert.Equal(t, 1, result.Version)
+	assert.Equal(t, "new-access-token", client.accessToken)
+	assert.Equal(t, "new-refresh-token", client.refreshToken)
+	assert.Equal(t, 3, callCount) // 1 get + 1 refresh + 1 get
+}
+
+func TestAPIClient_UploadFile_TokenRefresh(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+
+		if r.URL.Path == "/api/refresh" {
+			// Первый вызов refresh - успешный
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"access_token":"new-access-token","refresh_token":"new-refresh-token"}`))
+			return
+		}
+
+		if r.URL.Path == "/api/files" {
+			if callCount == 1 {
+				// Первый вызов upload - 401 с expired token
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"message":"access token expired"}`))
+			} else {
+				// Второй вызов upload - успешный
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"id":"file-123","version":1}`))
+			}
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client := NewAPIClient(server.URL)
+	client.accessToken = "old-access-token"
+	client.refreshToken = "old-refresh-token"
+
+	fileReader := strings.NewReader("test file content")
+	result, err := client.UploadFile(context.Background(), "test-file", "test metadata", fileReader, "test.txt")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "file-123", result.ID)
+	assert.Equal(t, 1, result.Version)
+	assert.Equal(t, "new-access-token", client.accessToken)
+	assert.Equal(t, "new-refresh-token", client.refreshToken)
+	assert.Equal(t, 3, callCount) // 1 upload + 1 refresh + 1 upload
+}
+
+func TestAPIClient_DownloadFile_TokenRefresh(t *testing.T) {
+	callCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+
+		if r.URL.Path == "/api/refresh" {
+			// Первый вызов refresh - успешный
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"access_token":"new-access-token","refresh_token":"new-refresh-token"}`))
+			return
+		}
+
+		if r.URL.Path == "/api/files/test-file/download" {
+			if callCount == 1 {
+				// Первый вызов download - 401 с expired token
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"message":"access token expired"}`))
+			} else {
+				// Второй вызов download - успешный
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("file content"))
+			}
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client := NewAPIClient(server.URL)
+	client.accessToken = "old-access-token"
+	client.refreshToken = "old-refresh-token"
+
+	reader, err := client.DownloadFile(context.Background(), "test-file")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, reader)
+
+	content, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	assert.Equal(t, "file content", string(content))
+
+	assert.Equal(t, "new-access-token", client.accessToken)
+	assert.Equal(t, "new-refresh-token", client.refreshToken)
+	assert.Equal(t, 3, callCount) // 1 download + 1 refresh + 1 download
+}

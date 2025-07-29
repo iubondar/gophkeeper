@@ -15,6 +15,9 @@ import (
 
 const secretKey = "supersecretkey"
 
+const accessTokenDuration = 15 * time.Minute
+const refreshTokenDuration = 7 * 24 * time.Hour
+
 // AuthCookieName - имя cookie для хранения токена аутентификации
 const AuthCookieName = "Authorization"
 
@@ -28,7 +31,7 @@ const AuthCookieName = "Authorization"
 //   - string: подписанный JWT токен
 //   - error: ошибка в случае неудачи
 func GenerateAccessToken(userID string) (string, error) {
-	return generateToken(userID, 15*time.Minute)
+	return generateToken(userID, accessTokenDuration)
 }
 
 // GenerateRefreshToken создает JWT refresh токен для указанного пользователя.
@@ -41,7 +44,7 @@ func GenerateAccessToken(userID string) (string, error) {
 //   - string: подписанный JWT токен
 //   - error: ошибка в случае неудачи
 func GenerateRefreshToken(userID string) (string, error) {
-	return generateToken(userID, 7*24*time.Hour) // 7 дней
+	return generateToken(userID, refreshTokenDuration)
 }
 
 func generateToken(userID string, duration time.Duration) (string, error) {
