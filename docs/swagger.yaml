@@ -1,0 +1,599 @@
+basePath: /
+definitions:
+  models.AuthenticateIn:
+    properties:
+      login:
+        description: Логин пользователя
+        example: user123
+        type: string
+      password_hash:
+        description: Хеш пароля
+        example: hash123
+        type: string
+    type: object
+  models.AuthenticateOut:
+    properties:
+      access_token:
+        description: Токен доступа
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      refresh_token:
+        description: Токен обновления
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  models.GetSecretOut:
+    properties:
+      encrypted_data:
+        description: Зашифрованные данные
+        items:
+          type: integer
+        type: array
+      file_key:
+        description: Ключ файла (для файловых секретов)
+        example: file_key_123
+        type: string
+      file_name:
+        description: Имя файла (для файловых секретов)
+        example: document.txt
+        type: string
+      id:
+        description: Уникальный идентификатор секрета
+        example: uuid-123
+        type: string
+      label:
+        description: Метка секрета
+        example: my_secret
+        type: string
+      metadata:
+        description: Метаданные
+        example: Personal secret
+        type: string
+      type:
+        description: Тип секрета
+        example: text
+        type: string
+      version:
+        description: Версия секрета
+        example: 1
+        type: integer
+    type: object
+  models.JSONError:
+    properties:
+      code:
+        description: HTTP код ошибки
+        example: 400
+        type: integer
+      message:
+        description: Сообщение об ошибке
+        example: Error message
+        type: string
+    type: object
+  models.LoginIn:
+    properties:
+      login:
+        description: Логин пользователя
+        example: user123
+        type: string
+    type: object
+  models.LoginOut:
+    properties:
+      salt:
+        description: Соль для хеширования пароля
+        example: salt123
+        type: string
+    type: object
+  models.RegisterIn:
+    properties:
+      login:
+        description: Логин пользователя
+        example: user123
+        type: string
+      password_hash:
+        description: Хеш пароля
+        example: hash123
+        type: string
+      salt:
+        description: Соль для хеширования
+        example: salt123
+        type: string
+    type: object
+  models.UpdateSecretIn:
+    properties:
+      encrypted_data:
+        description: Зашифрованные данные
+        items:
+          type: integer
+        type: array
+      file_key:
+        description: Ключ файла (для файловых секретов)
+        example: file_key_123
+        type: string
+      label:
+        description: Метка секрета
+        example: my_secret
+        type: string
+      metadata:
+        description: Метаданные
+        example: Personal secret
+        type: string
+      type:
+        description: Тип секрета
+        example: text
+        type: string
+      version:
+        description: версия, которую ожидает клиент
+        example: 1
+        type: integer
+    type: object
+  models.UpdateSecretOut:
+    properties:
+      version:
+        description: Новая версия секрета
+        example: 2
+        type: integer
+    type: object
+  models.UploadSecretIn:
+    properties:
+      encrypted_data:
+        description: Зашифрованные данные
+        items:
+          type: integer
+        type: array
+      file_key:
+        description: Ключ файла (для файловых секретов)
+        example: file_key_123
+        type: string
+      label:
+        description: Метка секрета
+        example: my_secret
+        type: string
+      metadata:
+        description: Метаданные
+        example: Personal secret
+        type: string
+      type:
+        description: Тип секрета
+        example: text
+        type: string
+    type: object
+  models.UploadSecretOut:
+    properties:
+      id:
+        description: Уникальный идентификатор секрета
+        example: uuid-123
+        type: string
+      version:
+        description: Версия секрета
+        example: 1
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API для безопасного хранения секретов и файлов
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: GophKeeper API
+  version: "1.0"
+paths:
+  /api/authenticate:
+    post:
+      consumes:
+      - application/json
+      description: Проверяет хеш пароля и возвращает токены доступа
+      parameters:
+      - description: Данные для аутентификации
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.AuthenticateIn'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная аутентификация, возвращены токены
+          schema:
+            $ref: '#/definitions/models.AuthenticateOut'
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "401":
+          description: Неверные учетные данные
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      summary: Аутентификация пользователя
+      tags:
+      - auth
+  /api/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет секрет с сервера по имени
+      parameters:
+      - description: Имя секрета для удаления
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Секрет успешно удален
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "401":
+          description: Неавторизованный доступ
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "404":
+          description: Секрет не найден
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      security:
+      - ApiKeyAuth: []
+      summary: Удаление секрета
+      tags:
+      - secrets
+  /api/files:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает зашифрованный файл на сервер
+      parameters:
+      - description: Файл для загрузки
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Метка файла
+        in: formData
+        name: label
+        required: true
+        type: string
+      - description: Метаданные файла
+        in: formData
+        name: metadata
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Файл успешно загружен
+          schema:
+            $ref: '#/definitions/models.UploadSecretOut'
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "401":
+          description: Неавторизованный доступ
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "409":
+          description: Файл с такой меткой уже существует
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      security:
+      - ApiKeyAuth: []
+      summary: Загрузка файла
+      tags:
+      - files
+  /api/files/{label}/download:
+    get:
+      consumes:
+      - application/json
+      description: Скачивает зашифрованный файл с сервера по метке
+      parameters:
+      - description: Метка файла
+        in: path
+        name: label
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Файл успешно скачан
+          schema:
+            type: file
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "401":
+          description: Неавторизованный доступ
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "404":
+          description: Файл не найден
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      security:
+      - ApiKeyAuth: []
+      summary: Скачивание файла
+      tags:
+      - files
+  /api/get:
+    get:
+      consumes:
+      - application/json
+      description: Получает зашифрованный секрет с сервера по имени
+      parameters:
+      - description: Имя секрета
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Секрет успешно получен
+          schema:
+            $ref: '#/definitions/models.GetSecretOut'
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "401":
+          description: Неавторизованный доступ
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "404":
+          description: Секрет не найден
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      security:
+      - ApiKeyAuth: []
+      summary: Получение секрета
+      tags:
+      - secrets
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      description: Возвращает соль для хеширования пароля
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginIn'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный вход, возвращена соль
+          schema:
+            $ref: '#/definitions/models.LoginOut'
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      summary: Вход пользователя в систему
+      tags:
+      - auth
+  /api/register:
+    post:
+      consumes:
+      - application/json
+      description: Регистрирует нового пользователя в системе
+      parameters:
+      - description: Данные для регистрации
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegisterIn'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная регистрация
+          schema:
+            $ref: '#/definitions/models.AuthenticateOut'
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "409":
+          description: Пользователь уже существует
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      summary: Регистрация нового пользователя
+      tags:
+      - auth
+  /api/update:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет зашифрованный секрет на сервере с проверкой версии
+      parameters:
+      - description: Данные секрета для обновления
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateSecretIn'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Секрет успешно обновлен
+          schema:
+            $ref: '#/definitions/models.UpdateSecretOut'
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "401":
+          description: Неавторизованный доступ
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "409":
+          description: Конфликт версий
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      security:
+      - ApiKeyAuth: []
+      summary: Обновление секрета
+      tags:
+      - secrets
+  /api/upload:
+    post:
+      consumes:
+      - application/json
+      description: Загружает зашифрованный секрет на сервер
+      parameters:
+      - description: Данные секрета для загрузки
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UploadSecretIn'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Секрет успешно загружен
+          schema:
+            $ref: '#/definitions/models.UploadSecretOut'
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "401":
+          description: Неавторизованный доступ
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      security:
+      - ApiKeyAuth: []
+      summary: Загрузка секрета
+      tags:
+      - secrets
+  /api/version:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает только версию секрета по имени
+      parameters:
+      - description: Имя секрета
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Версия секрета
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "401":
+          description: Неавторизованный доступ
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "404":
+          description: Секрет не найден
+          schema:
+            $ref: '#/definitions/models.JSONError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      security:
+      - ApiKeyAuth: []
+      summary: Получение версии секрета
+      tags:
+      - secrets
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Проверяет доступность сервиса и подключение к хранилищу данных
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сервис работает нормально
+        "500":
+          description: Сервис недоступен
+          schema:
+            $ref: '#/definitions/models.JSONError'
+      summary: Проверка здоровья сервиса
+      tags:
+      - health
+securityDefinitions:
+  ApiKeyAuth:
+    description: Токен доступа в формате Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
+tags:
+- description: Операции аутентификации и регистрации
+  name: auth
+- description: Операции с секретами (текст, логины/пароли, карты)
+  name: secrets
+- description: Операции с файлами
+  name: files
+- description: Проверка состояния сервиса
+  name: health

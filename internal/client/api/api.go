@@ -1,0 +1,551 @@
+// Package api предоставляет HTTP клиент для взаимодействия с сервером GophKeeper.
+// Включает методы для регистрации, аутентификации, работы с секретами и файлами.
+package api
+
+import (
+	"bytes"
+	"context"
+	"crypto/tls"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"gophkeeper/internal/auth"
+	"gophkeeper/internal/models"
+	"io"
+	"net/http"
+	"strings"
+
+	"github.com/go-resty/resty/v2"
+	"go.uber.org/zap"
+)
+
+// APIClient представляет HTTP клиент для взаимодействия с сервером GophKeeper.
+// Хранит токены аутентификации и предоставляет методы для работы с API.
+type APIClient struct {
+	httpc        *resty.Client
+	accessToken  string
+	refreshToken string
+}
+
+// NewAPIClient создает новый экземпляр APIClient для указанного URL сервера.
+// Автоматически добавляет протокол https:// если он не указан.
+// Для localhost отключает проверку SSL сертификатов.
+//
+// Параметры:
+//   - serverURL: URL сервера (например, "localhost:8080" или "https://example.com")
+//
+// Возвращает:
+//   - *APIClient: новый экземпляр клиента
+func NewAPIClient(serverURL string) *APIClient {
+	// Проверяем, начинается ли URL с протокола
+	if !strings.HasPrefix(serverURL, "http://") && !strings.HasPrefix(serverURL, "https://") {
+		serverURL = "https://" + serverURL
+	}
+
+	client := resty.New().SetBaseURL(serverURL)
+
+	// Для localhost игнорируем проверку сертификата (для разработки)
+	if strings.Contains(serverURL, "localhost") {
+		client.SetTLSClientConfig(&tls.Config{
+			InsecureSkipVerify: true,
+		})
+	}
+
+	return &APIClient{httpc: client}
+}
+
+// handleAuthenticateResponse обрабатывает ответ аутентификации и обновляет токены в клиенте
+func (c *APIClient) handleAuthenticateResponse(responseBody []byte) error {
+	var out models.AuthenticateOut
+	err := json.Unmarshal(responseBody, &out)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal authenticate response: %w", err)
+	}
+
+	c.accessToken = out.AccessToken
+	c.refreshToken = out.RefreshToken
+
+	return nil
+}
+
+// handleErrorResponse обрабатывает ошибки HTTP ответа и разбирает JSONError
+func (c *APIClient) handleErrorResponse(response *resty.Response) error {
+	if response.StatusCode() >= 400 {
+		// Для 401 ошибки возвращаем специальную ошибку
+		if response.StatusCode() == http.StatusUnauthorized {
+			return models.ErrUnauthorized
+		}
+
+		// Пытаемся разобрать JSONError
+		jsonErr, err := models.ParseJSONError(response.Body())
+		if err == nil {
+			return errors.New(jsonErr.Message)
+		} else {
+			zap.L().Sugar().Debugln("Failed to parse JSON error", zap.Error(err))
+		}
+		// Если не удалось разобрать JSONError, возвращаем обычную ошибку
+		return errors.New(response.String())
+	}
+	return nil
+}
+
+// Refresh обновляет токены доступа используя refresh token.
+// После успешного обновления сохраняет новые токены в клиенте.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
+func (c *APIClient) Refresh(ctx context.Context) error {
+	if c.refreshToken == "" {
+		return errors.New("refresh token is required")
+	}
+
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		SetBody(models.RefreshIn{RefreshToken: c.refreshToken}).
+		Post("/api/refresh")
+
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return c.handleAuthenticateResponse(response.Body())
+}
+
+// executeWithTokenRefresh выполняет HTTP запрос с автоматическим обновлением токенов при ошибке 401.
+// Если запрос возвращает 401 (ErrAccessTokenExpired), автоматически обновляет токены и повторяет запрос.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - requestFn: функция для выполнения HTTP запроса
+//
+// Возвращает:
+//   - *resty.Response: ответ сервера
+//   - error: ошибка в случае неудачи
+func (c *APIClient) executeWithTokenRefresh(ctx context.Context, requestFn func() (*resty.Response, error)) (*resty.Response, error) {
+	// Первая попытка
+	response, err := requestFn()
+	if err != nil {
+		return nil, err
+	}
+
+	// Проверяем на ошибку 401
+	if response.StatusCode() == http.StatusUnauthorized {
+		jsonErr, parseErr := models.ParseJSONError(response.Body())
+		if parseErr == nil && jsonErr.Message == models.ErrAccessTokenExpired.Error() {
+			// Пытаемся обновить токены
+			if refreshErr := c.Refresh(ctx); refreshErr != nil {
+				return nil, fmt.Errorf("failed to refresh tokens: %w", refreshErr)
+			}
+
+			// Повторяем запрос с новыми токенами
+			response, err = requestFn()
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return response, nil
+}
+
+// setAuthCookie устанавливает cookie аутентификации для запроса
+func (c *APIClient) setAuthCookie(request *resty.Request) error {
+	if c.accessToken == "" {
+		return errors.New("access token is required")
+	}
+	request.SetCookie(&http.Cookie{
+		Name:  auth.AuthCookieName,
+		Value: c.accessToken,
+	})
+	return nil
+}
+
+// Register выполняет регистрацию нового пользователя на сервере.
+// После успешной регистрации автоматически сохраняет токены аутентификации.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные для регистрации
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
+func (c *APIClient) Register(ctx context.Context, in models.RegisterIn) error {
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		SetBody(in).
+		Post("/api/register")
+
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return c.handleAuthenticateResponse(response.Body())
+}
+
+// Login выполняет запрос на вход в систему и получает соль для хеширования пароля.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные для входа
+//
+// Возвращает:
+//   - string: соль для хеширования пароля
+//   - error: ошибка в случае неудачи
+func (c *APIClient) Login(ctx context.Context, in models.LoginIn) (salt string, err error) {
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		SetBody(in).
+		Post("/api/login")
+
+	if err != nil {
+		return "", err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return "", err
+	}
+
+	var out models.LoginOut
+	err = json.Unmarshal(response.Body(), &out)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal login response: %w", err)
+	}
+
+	return out.Salt, nil
+}
+
+// Authenticate выполняет аутентификацию пользователя с хешированным паролем.
+// После успешной аутентификации сохраняет токены доступа.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные для аутентификации
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
+func (c *APIClient) Authenticate(ctx context.Context, in models.AuthenticateIn) error {
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		SetBody(in).
+		Post("/api/authenticate")
+
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return c.handleAuthenticateResponse(response.Body())
+}
+
+// UploadSecret загружает секрет на сервер.
+// Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные секрета для загрузки
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
+func (c *APIClient) UploadSecret(ctx context.Context, in models.UploadSecretIn) error {
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetBody(in)
+
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Post("/api/upload")
+	}
+
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetSecretVersion получает текущую версию секрета с сервера.
+// Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - secretName: имя секрета
+//
+// Возвращает:
+//   - int: версия секрета
+//   - error: ошибка в случае неудачи
+func (c *APIClient) GetSecretVersion(ctx context.Context, secretName string) (int, error) {
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetQueryParam("name", secretName)
+
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Get("/api/version")
+	}
+
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return 0, err
+	}
+
+	var versionResult struct {
+		Version int `json:"version"`
+	}
+	err = json.Unmarshal(response.Body(), &versionResult)
+	if err != nil {
+		return 0, fmt.Errorf("failed to unmarshal version response: %w", err)
+	}
+
+	return versionResult.Version, nil
+}
+
+// UpdateSecret обновляет существующий секрет на сервере.
+// Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - in: данные для обновления секрета
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
+func (c *APIClient) UpdateSecret(ctx context.Context, in models.UpdateSecretIn) error {
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetBody(in)
+
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Put("/api/update")
+	}
+
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetSecret получает секрет с сервера.
+// Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - secretName: имя секрета
+//
+// Возвращает:
+//   - *models.GetSecretOut: данные секрета
+//   - error: ошибка в случае неудачи
+func (c *APIClient) GetSecret(ctx context.Context, secretName string) (*models.GetSecretOut, error) {
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetQueryParam("name", secretName)
+
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Get("/api/get")
+	}
+
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return nil, err
+	}
+
+	var out models.GetSecretOut
+	err = json.Unmarshal(response.Body(), &out)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal get secret response: %w", err)
+	}
+
+	return &out, nil
+}
+
+// DeleteSecret удаляет секрет с сервера.
+// Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - secretName: имя секрета для удаления
+//
+// Возвращает:
+//   - error: ошибка в случае неудачи
+func (c *APIClient) DeleteSecret(ctx context.Context, secretName string) error {
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetQueryParam("name", secretName)
+
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Delete("/api/delete")
+	}
+
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UploadFile загружает зашифрованный файл на сервер.
+// Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - label: метка файла
+//   - metadata: метаданные файла
+//   - file: поток для чтения файла
+//   - filename: имя файла
+//
+// Возвращает:
+//   - *models.UploadSecretOut: результат загрузки
+//   - error: ошибка в случае неудачи
+func (c *APIClient) UploadFile(ctx context.Context, label, metadata string, file io.Reader, filename string) (*models.UploadSecretOut, error) {
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetFileReader("file", filename, file).
+			SetFormData(map[string]string{
+				"label":    label,
+				"metadata": metadata,
+			})
+
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Post("/api/files")
+	}
+
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return nil, err
+	}
+
+	var out models.UploadSecretOut
+	err = json.Unmarshal(response.Body(), &out)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal upload file response: %w", err)
+	}
+
+	return &out, nil
+}
+
+// DownloadFile скачивает зашифрованный файл с сервера.
+// Требует предварительной аутентификации.
+// Автоматически обновляет токены при ошибке 401.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//   - label: метка файла для скачивания
+//
+// Возвращает:
+//   - io.ReadCloser: поток для чтения файла
+//   - error: ошибка в случае неудачи
+func (c *APIClient) DownloadFile(ctx context.Context, label string) (io.ReadCloser, error) {
+	requestFn := func() (*resty.Response, error) {
+		request := c.httpc.R().
+			SetContext(ctx).
+			SetQueryParam("label", label)
+
+		if err := c.setAuthCookie(request); err != nil {
+			return nil, err
+		}
+
+		return request.Get(fmt.Sprintf("/api/files/%s/download", label))
+	}
+
+	response, err := c.executeWithTokenRefresh(ctx, requestFn)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return nil, err
+	}
+
+	return io.NopCloser(bytes.NewReader(response.Body())), nil
+}
+
+// HealthCheck проверяет доступность сервера по эндпоинту /health.
+//
+// Параметры:
+//   - ctx: контекст запроса
+//
+// Возвращает:
+//   - error: ошибка в случае недоступности сервера
+func (c *APIClient) HealthCheck(ctx context.Context) error {
+	response, err := c.httpc.R().
+		SetContext(ctx).
+		Get("/health")
+
+	if err != nil {
+		return err
+	}
+
+	if err := c.handleErrorResponse(response); err != nil {
+		return err
+	}
+
+	return nil
+}
